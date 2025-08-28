@@ -9,7 +9,7 @@ This file consists of 4 parts:
 
 # Backend
 ## Tech Stack
-Python, Notion API (potentially use Notion MCP), and OpenAI API
+Python, Notion API (potentially use Notion MCP), Google Calendar API, and OpenAI API
 ## Layers
 Our backend consists of the following layers:
 1. data: This is responsible for accessing data:
