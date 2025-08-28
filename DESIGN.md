@@ -26,8 +26,15 @@ Our backend consists of the following layers:
 ### AGENT DESIGN
 Our use a single agent structure. The agent should be able to accomplish the following using tool.
 #### 1. Generate appropriate tags for events it observed. Mainly, it should generate be able generate same tags for events that share the same nature at a certain level. 
-    a. Everyday, after fetch the primiarily organize information from notion and notion calendar into events
-        before agent starts to generate tags for events collected, it reads our database to see what existed tags to are there. Agent attempts to use existing tag to tag our current events.
+    a. The information retrieval logic is simple:
+        1. We start from Notion Calendar, where most events during the day is logged. 
+        2. Using the name of the activity on Notion Calendar, we deduce the activities nature. This is the `Init Event Fetch`, we have a simple deduced nature of the event, and the precise time duration.
+        3. We went into notion, attempting find related content for the event. We look for probable source in the following ways:
+                i. Blocks with Last edited time within the time range is probable source. 
+                ii. That Day's Diary probably contains some details about the activity
+            We then check the probable source's with the deduced nature of the event, then we produce data entries to the `raw activity table`
+    a. Everyday, after fetch the primiarily organize information from notion and notion calendar into events `raw activity table`
+        before agent starts to generate tags for events collected, it queries our database to see what existed tags to are there. Agent attempts to use existing tag to tag our current events.
     b. There are two cases where an agent can generate new tags
         b.1 the average `tag : event ratio` is too high (I will set a value for this). In this case, agent will initiate a system-wide tag generation, where it is allowed to, based on all events in the database, generate tags.
         b.2 No existing tags is appropriate: e.g. `swimming` is our only existing tag, but our event is cooking.
@@ -54,7 +61,7 @@ SQL-like database. Relational Database
 1. Date: the date that the activity happened
 2. Time (optional)
 3. Duration: how long did this activity took
-4. Details: In this field have a thorough summary of raw information, like text from diary, or whatever from calendar. 
+4. Details: In this field have a thorough summary of raw information, like text from development notes(开发笔记), or whatever from calendar. 
 5. Source: e.g., notion, notion calendar.
 6. Orig: a link pointing the original information
 ### processed activity table

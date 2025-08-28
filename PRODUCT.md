@@ -3,7 +3,7 @@ This file is serve as the ultimate instruction and guideline for my development;
 ## 1. Summary
 At the MVP stage. This is going to be a project that serve a very oriented-focus: use AI(langauge model), to document and organize one's time.
 This product provide the ability for people to understand what has their time has spent on over a 4-week, 1-year, and even 5-year span.
-This product organize information from diary, calendar, and potentially other sources, detect what activity has occured, how long its duration, what is the nature of the activity.
+This product organize information from notes, calendar, and potentially other sources, detect what activity has occured, how long its duration, what is the nature of the activity.
 
 ## 2. Example
 At simplicity, it output a information like the followoing
