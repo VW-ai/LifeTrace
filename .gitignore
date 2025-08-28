@@ -1,0 +1,6 @@
+secret*
+virtualenv
+virtualenv/*
+.env
+venv/*
+venv
