@@ -33,6 +33,11 @@ Our use a single agent structure. The agent should be able to accomplish the fol
                 i. Blocks with Last edited time within the time range is probable source. 
                 ii. That Day's Diary probably contains some details about the activity
             We then check the probable source's with the deduced nature of the event, then we produce data entries to the `raw activity table`
+            In the case we did not fetch anything relevant, we log the data entries to the `raw activity table`, and the details part we will use our deduced nature of the event.
+        4. If there is any updates Notion that has not being matched in any of our calendar event, we check up the edits, and make a decision out the three choices:
+                i. It should be listed as a new event; we give this type of event a time estimation based on the length of the text 【will be specified in later development】
+                ii. It should be merged with some existed event.
+                iii. It should be abandoned because its content is too minimal [we will add some Random Thoughts of the Day section in future stage of development, potentially, for this type of thing]
     a. Everyday, after fetch the primiarily organize information from notion and notion calendar into events `raw activity table`
         before agent starts to generate tags for events collected, it queries our database to see what existed tags to are there. Agent attempts to use existing tag to tag our current events.
     b. There are two cases where an agent can generate new tags
