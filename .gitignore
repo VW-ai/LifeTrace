@@ -4,3 +4,4 @@ virtualenv/*
 .env
 venv/*
 venv
+notion_content.json
