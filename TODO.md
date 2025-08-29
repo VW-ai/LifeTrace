@@ -23,3 +23,39 @@ We follow an append-only strategy in the writing of thie file.
     -   The agent should be able to consume the output of both parsers.
     -   Implement a basic activity identification mechanism using an LLM.
     -   The agent should save the processed activities to a CSV/JSON file.
+
+---
+### Next Steps (as of 2025-08-29)
+
+-   **[COMPLETED] ✅ Implement `google_calendar_parser.py`:**
+    -   ✅ Read `google_calendar_events.json`.
+    -   ✅ Implement parsing of events with time filtering.
+    -   ✅ Implement filtering based on the `updated` timestamp.
+    -   ✅ Output structured document objects consistent with Notion parser.
+    -   ✅ Add comprehensive testing and documentation.
+
+-   **[High Priority] Implement the AI Agent (`src/backend/agent/`):**
+    -   Create agent directory structure with proper documentation.
+    -   Implement data consumption from both notion and google calendar parsers.
+    -   Design tag generation system with existing tag reuse logic.
+    -   Implement LLM integration for activity categorization and tagging.
+    -   Create raw activity table data structure (Date, Duration, Details, Source, Tags).
+    -   Implement processed activity table with tag consolidation.
+    -   Add agent testing framework.
+
+-   **[High Priority] Database Schema Implementation:**
+    -   Design and implement SQL database schema for raw and processed activity tables.
+    -   Create database connection and CRUD operations.
+    -   Implement data persistence for agent output.
+    -   Add database migration scripts.
+
+-   **[Medium Priority] Agent Intelligence Features:**
+    -   Implement event matching between Notion edits and Calendar events.
+    -   Add time estimation for unscheduled Notion activities.
+    -   Create system-wide tag regeneration when tag:event ratio is too high.
+    -   Implement decision logic for new/merged/abandoned Notion updates.
+
+-   **[Low Priority] Integration & API Layer:**
+    -   Create internal API endpoints for frontend data consumption.
+    -   Implement data aggregation for charts (line, pie, breakdown list).
+    -   Add time range filtering and query optimization.
