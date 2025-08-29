@@ -24,3 +24,11 @@ To ensure that the project remains understandable and that the purpose of comple
 - Any significant feature, module, or service within a package must be accompanied by a `***_META.md` file in the same directory, where `***` is our component/feauture name.
 - This file should explain the feature's purpose, its core logic, and how it interacts with other parts of the system.
 - **Example**: If we create a complex `PropertyRecommender` service within the `agent` package, it must be located alongside a `PropertyRecommender_METAr.md` file that explains its algorithm and usage.
+
+### 2.5 Proper File Structure
+- Files Serve different functionality at different level of our service should be put into different folder, with a name of the folder that can explain its content concisely.
+- Working with the `Principle of Co-located Documentation`, each folder should have one and only one META.md that describes all of its content, like scripts, sub-folders. 
+
+### 2.6 Comments and Code Style
+- Adapt Google Style in specific code writing
+- Comment should be good so that another developer would be able to pickup the development the project.
