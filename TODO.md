@@ -86,7 +86,7 @@ We follow an append-only strategy in the writing of thie file.
     -   ✅ Designed performance indexes for optimal query performance on date, tag, and source-based queries.
     -   ✅ Built database CLI tool for management, migration, validation, and debugging operations.
 
--   **[HIGH Priority] Backend API Design & Implementation:**
+-   **[HIGH Priority] Backend API Design & Implementation:** [evaluate our database, check folder @/Users/bytedance/smartHistory/src/backend/api to see whether we have completed this part.]
     -   Design RESTful API endpoints for frontend data consumption and user interactions.
     -   Implement authentication and authorization system for user data protection.
     -   Create data aggregation endpoints for dashboard charts (time series, pie charts, activity breakdowns).
