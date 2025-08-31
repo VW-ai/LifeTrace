@@ -75,6 +75,15 @@ class ActivityService:
         # Convert to response models
         activities = []
         for row in results:
+            # Parse raw_data if it's a JSON string
+            raw_data = row['raw_data'] or {}
+            if isinstance(raw_data, str):
+                try:
+                    import json
+                    raw_data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    raw_data = {}
+            
             activity = RawActivityResponse(
                 id=row['id'],
                 date=row['date'],
@@ -83,7 +92,7 @@ class ActivityService:
                 details=row['details'],
                 source=row['source'],
                 orig_link=row['orig_link'],
-                raw_data=row['raw_data'] or {},
+                raw_data=raw_data,
                 created_at=datetime.fromisoformat(row['created_at'])
             )
             activities.append(activity)
@@ -181,15 +190,32 @@ class ActivityService:
                 )
                 activity_tags.append(tag)
             
+            # Parse JSON fields that are stored as strings
+            sources = row['sources'] or []
+            if isinstance(sources, str):
+                try:
+                    import json
+                    sources = json.loads(sources)
+                except (json.JSONDecodeError, TypeError):
+                    sources = []
+            
+            raw_activity_ids = row['raw_activity_ids'] or []
+            if isinstance(raw_activity_ids, str):
+                try:
+                    import json
+                    raw_activity_ids = json.loads(raw_activity_ids)
+                except (json.JSONDecodeError, TypeError):
+                    raw_activity_ids = []
+            
             activity = ProcessedActivityResponse(
                 id=row['id'],
                 date=row['date'],
                 time=row['time'],
                 total_duration_minutes=row['total_duration_minutes'],
                 combined_details=row['combined_details'],
-                sources=row['sources'],
+                sources=sources,
                 tags=activity_tags,
-                raw_activity_ids=row['raw_activity_ids'],
+                raw_activity_ids=raw_activity_ids,
                 created_at=datetime.fromisoformat(row['created_at'])
             )
             activities.append(activity)
@@ -280,7 +306,8 @@ class TagService:
         # Check if tag already exists
         existing = TagDAO.get_by_name(tag_data.name)
         if existing:
-            raise ValueError(f"Tag '{tag_data.name}' already exists")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=409, detail=f"Tag '{tag_data.name}' already exists")
         
         # Create new tag
         tag_db = TagDB(

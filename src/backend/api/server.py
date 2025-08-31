@@ -89,9 +89,9 @@ def create_app() -> FastAPI:
     # Activities Endpoints
     @app.get(f"{API_V1_PREFIX}/activities/raw", response_model=PaginatedActivitiesResponse)
     async def get_raw_activities(
-        source: Optional[str] = Query(None, regex=r'^(notion|google_calendar)$'),
-        date_start: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
-        date_end: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
+        source: Optional[str] = Query(None, pattern=r'^(notion|google_calendar)$'),
+        date_start: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        date_end: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
         limit: int = Query(default=100, ge=1, le=1000),
         offset: int = Query(default=0, ge=0),
         activity_service: ActivityService = Depends(get_activity_service)
@@ -107,8 +107,8 @@ def create_app() -> FastAPI:
 
     @app.get(f"{API_V1_PREFIX}/activities/processed", response_model=PaginatedProcessedActivitiesResponse)
     async def get_processed_activities(
-        date_start: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
-        date_end: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
+        date_start: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        date_end: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
         tags: Optional[str] = Query(None, description="Comma-separated tag names"),
         limit: int = Query(default=100, ge=1, le=1000),
         offset: int = Query(default=0, ge=0),
@@ -127,8 +127,8 @@ def create_app() -> FastAPI:
     # Insights Endpoints
     @app.get(f"{API_V1_PREFIX}/insights/overview", response_model=InsightsOverviewResponse)
     async def get_insights_overview(
-        date_start: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
-        date_end: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
+        date_start: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        date_end: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
         insights_service: InsightsService = Depends(get_insights_service)
     ):
         """Get activity insights overview."""
@@ -136,9 +136,9 @@ def create_app() -> FastAPI:
 
     @app.get(f"{API_V1_PREFIX}/insights/time-distribution", response_model=TimeDistributionResponse)
     async def get_time_distribution(
-        date_start: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
-        date_end: Optional[str] = Query(None, regex=r'^\d{4}-\d{2}-\d{2}$'),
-        group_by: str = Query(default='day', regex=r'^(day|week|month)$'),
+        date_start: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        date_end: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        group_by: str = Query(default='day', pattern=r'^(day|week|month)$'),
         insights_service: InsightsService = Depends(get_insights_service)
     ):
         """Get time distribution analysis."""
@@ -151,7 +151,7 @@ def create_app() -> FastAPI:
     # Tags Endpoints
     @app.get(f"{API_V1_PREFIX}/tags", response_model=PaginatedTagsResponse)
     async def get_tags(
-        sort_by: str = Query(default='usage_count', regex=r'^(name|usage_count|created_at)$'),
+        sort_by: str = Query(default='usage_count', pattern=r'^(name|usage_count|created_at)$'),
         limit: int = Query(default=100, ge=1, le=1000),
         offset: int = Query(default=0, ge=0),
         tag_service: TagService = Depends(get_tag_service)

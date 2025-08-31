@@ -3,7 +3,7 @@ import json
 import tempfile
 import os
 from datetime import datetime, timezone, timedelta
-from src.backend.google_calendar_parser.parser import parse_calendar_events, calculate_duration
+from src.backend.parsers.google_calendar.parser import parse_calendar_events, calculate_duration
 
 class TestGoogleCalendarParser(unittest.TestCase):
     
@@ -97,7 +97,9 @@ class TestGoogleCalendarParser(unittest.TestCase):
             "updated": "2025-08-29T08:00:00.000Z"
         }
         
-        parsed = parse_calendar_events([event_no_desc], hours_since_last_update=24)
+        # Set 'now' to be within the time window of the event
+        now = datetime(2025, 8, 29, 12, 0, 0, tzinfo=timezone.utc)
+        parsed = parse_calendar_events([event_no_desc], hours_since_last_update=24, now=now)
         self.assertEqual(len(parsed), 1)
         self.assertEqual(parsed[0]["text"], "Simple Event")
         self.assertEqual(parsed[0]["description"], "")

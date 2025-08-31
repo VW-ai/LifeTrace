@@ -7,7 +7,7 @@ Provides clean separation between internal database models and API contracts.
 
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 # Response Models
@@ -22,8 +22,7 @@ class TagResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RawActivityResponse(BaseModel):
@@ -38,8 +37,7 @@ class RawActivityResponse(BaseModel):
     raw_data: Dict[str, Any] = {}
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProcessedActivityResponse(BaseModel):
@@ -54,8 +52,7 @@ class ProcessedActivityResponse(BaseModel):
     raw_activity_ids: List[int] = []
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Pagination Models
@@ -136,9 +133,10 @@ class TagCreateRequest(BaseModel):
     """Request to create a new tag."""
     name: str = Field(..., min_length=1, max_length=50)
     description: Optional[str] = Field(None, max_length=200)
-    color: Optional[str] = Field(None, regex=r'^#[0-9a-fA-F]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9a-fA-F]{6}$')
 
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v):
         # Ensure tag name is lowercase and alphanumeric with dashes/underscores
         if not v.replace('-', '').replace('_', '').replace(' ', '').isalnum():
@@ -244,9 +242,9 @@ class ErrorResponse(BaseModel):
 # Query Parameter Models (for documentation)
 class ActivityQueryParams(BaseModel):
     """Query parameters for activity endpoints."""
-    source: Optional[str] = Field(None, regex=r'^(notion|google_calendar)$')
-    date_start: Optional[str] = Field(None, regex=r'^\d{4}-\d{2}-\d{2}$')
-    date_end: Optional[str] = Field(None, regex=r'^\d{4}-\d{2}-\d{2}$')
+    source: Optional[str] = Field(None, pattern=r'^(notion|google_calendar)$')
+    date_start: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+    date_end: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$')
     limit: int = Field(default=100, ge=1, le=1000)
     offset: int = Field(default=0, ge=0)
 
@@ -258,17 +256,17 @@ class ProcessedActivityQueryParams(ActivityQueryParams):
 
 class TagQueryParams(BaseModel):
     """Query parameters for tag endpoints."""
-    sort_by: str = Field(default='usage_count', regex=r'^(name|usage_count|created_at)$')
+    sort_by: str = Field(default='usage_count', pattern=r'^(name|usage_count|created_at)$')
     limit: int = Field(default=100, ge=1, le=1000)
     offset: int = Field(default=0, ge=0)
 
 
 class InsightsQueryParams(BaseModel):
     """Query parameters for insights endpoints."""
-    date_start: Optional[str] = Field(None, regex=r'^\d{4}-\d{2}-\d{2}$')
-    date_end: Optional[str] = Field(None, regex=r'^\d{4}-\d{2}-\d{2}$')
+    date_start: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+    date_end: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$')
 
 
 class TimeDistributionQueryParams(InsightsQueryParams):
     """Query parameters for time distribution endpoints."""
-    group_by: str = Field(default='day', regex=r'^(day|week|month)$')
+    group_by: str = Field(default='day', pattern=r'^(day|week|month)$')

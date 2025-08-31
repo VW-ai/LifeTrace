@@ -51,13 +51,12 @@ class DataConsumer:
             for activity_db in raw_activities_db:
                 # Convert database model to agent model
                 raw_activity = RawActivity(
-                    activity_id=f"{activity_db.source}_{activity_db.id}",
                     date=activity_db.date,
                     time=activity_db.time,
                     duration_minutes=activity_db.duration_minutes,
                     details=activity_db.details,
                     source=activity_db.source,
-                    orig_link=activity_db.orig_link,
+                    orig_link=activity_db.orig_link or "",
                     raw_data=activity_db.raw_data or {}
                 )
                 raw_activities.append(raw_activity)

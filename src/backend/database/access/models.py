@@ -751,6 +751,39 @@ class ActivityTagDAO:
         db = get_db_manager()
         affected = db.execute_update(query, (activity_id, tag_id))
         return affected > 0
+    
+    @staticmethod
+    def delete_by_tag_id(tag_id: int) -> int:
+        """Delete all activity-tag relationships for a specific tag."""
+        query = "DELETE FROM activity_tags WHERE tag_id = ?"
+        
+        db = get_db_manager()
+        affected = db.execute_update(query, (tag_id,))
+        return affected
+    
+    @staticmethod
+    def get_by_processed_activity_id(processed_activity_id: int) -> List['ActivityTagDB']:
+        """Get all activity-tag relationships for a processed activity."""
+        query = """
+        SELECT * FROM activity_tags 
+        WHERE processed_activity_id = ?
+        ORDER BY confidence_score DESC
+        """
+        
+        db = get_db_manager()
+        results = db.execute_query(query, (processed_activity_id,))
+        return [ActivityTagDAO._row_to_model(row) for row in results]
+    
+    @staticmethod
+    def _row_to_model(row) -> 'ActivityTagDB':
+        """Convert database row to ActivityTagDB model."""
+        return ActivityTagDB(
+            id=row.get('id'),
+            processed_activity_id=row['processed_activity_id'],
+            tag_id=row['tag_id'],
+            confidence_score=row['confidence_score'],
+            created_at=datetime.fromisoformat(row['created_at']) if row.get('created_at') else datetime.now()
+        )
 
 class UserSessionDAO:
     """Data Access Object for user sessions."""

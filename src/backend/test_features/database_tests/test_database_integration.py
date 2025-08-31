@@ -23,12 +23,12 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.backend.database import (
-    DatabaseConnection, ConnectionConfig,
+    DatabaseManager, ConnectionConfig,
     RawActivityDB, ProcessedActivityDB, TagDB, ActivityTagDB, UserSessionDB,
     RawActivityDAO, ProcessedActivityDAO, TagDAO, ActivityTagDAO, UserSessionDAO,
     SessionStatus, get_db_manager, initialize_database
 )
-from src.backend.database.migrations import MigrationManager, Migration
+from src.backend.database.schema.migrations import MigrationManager, Migration
 
 class TestDatabaseIntegration(unittest.TestCase):
     """Integration tests for database functionality."""
@@ -49,7 +49,7 @@ class TestDatabaseIntegration(unittest.TestCase):
         self.db.close_all_connections()
         
         # Clear the database connection instances for proper test isolation
-        DatabaseConnection._instances.clear()
+        DatabaseManager._instances.clear()
         
         # Remove temporary file
         try:

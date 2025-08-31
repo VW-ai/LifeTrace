@@ -2,7 +2,7 @@
 import json
 import os
 from datetime import datetime, timedelta, timezone
-from src.backend.notion_parser.parser import parse_blocks_recursive
+from src.backend.parsers.notion.parser import parse_blocks_recursive
 
 def setup_test_data(now):
     """Set up test data with a specific 'now' timestamp."""

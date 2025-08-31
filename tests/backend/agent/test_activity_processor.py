@@ -80,7 +80,8 @@ class TestActivityProcessorIntegration:
             notion_file=self.notion_file,
             calendar_file=self.calendar_file,
             output_raw_file=raw_output,
-            output_processed_file=processed_output
+            output_processed_file=processed_output,
+            use_database=False  # Use test files instead of database
         )
         
         # Verify report structure
@@ -185,7 +186,8 @@ class TestActivityProcessorIntegration:
             notion_file=empty_notion,
             calendar_file=empty_calendar,
             output_raw_file=raw_output,
-            output_processed_file=processed_output
+            output_processed_file=processed_output,
+            use_database=False  # Use file-based processing for this test
         )
         
         # Should handle empty data gracefully
@@ -207,7 +209,8 @@ class TestActivityProcessorIntegration:
             notion_file=nonexistent_notion,
             calendar_file=nonexistent_calendar,
             output_raw_file=raw_output,
-            output_processed_file=processed_output
+            output_processed_file=processed_output,
+            use_database=False  # Use file-based processing for this test
         )
         
         assert report['status'] == 'no_data'

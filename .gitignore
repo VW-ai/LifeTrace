@@ -63,3 +63,15 @@ processed_activities.json
 .DS_Store
 *.swp
 *.swo
+
+# API Development Files
+test_api_simple.py
+setup_api.py
+
+# Pytest Cache
+.pytest_cache/
+**/__pycache__/
+
+# API Test Artifacts
+test_output/
+api_test_results/
