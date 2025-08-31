@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 def run_daily_processing(args):
-    """Run daily activity processing."""
+    """Run daily activity processing (database-first)."""
     from src.backend.agent.core.agent import run_daily_processing as run_daily
     
     # Convert argparse Namespace to dict-like object for compatibility
@@ -31,10 +31,10 @@ def run_daily_processing(args):
             for k, v in kwargs.items():
                 setattr(self, k, v)
     
-    # Create args object with defaults
+    # Create args object for database-first processing
     agent_args = Args(
-        notion_file=args.notion_file or 'parsed_notion_content.json',
-        calendar_file=args.calendar_file or 'parsed_google_calendar_events.json', 
+        notion_file=args.notion_file,  # Optional - only for legacy fallback
+        calendar_file=args.calendar_file,  # Optional - only for legacy fallback 
         output_dir=args.output_dir or 'agent_output'
     )
     
@@ -109,10 +109,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_agent.py --mode daily              # Process activities with default files
+  python run_agent.py --mode daily              # Process activities from database (recommended)
   python run_agent.py --mode insights           # Generate insights from processed data
   python run_agent.py --test                    # Run capability demonstration
-  python run_agent.py --mode daily --notion-file custom.json --output-dir results/
+  python run_agent.py --mode daily --output-dir results/  # Save outputs to custom directory
         """
     )
     
@@ -125,10 +125,10 @@ Examples:
                        help='Run agent capability test')
     
     parser.add_argument('--notion-file',
-                       help='Path to parsed Notion content file')
+                       help='Path to parsed Notion content file (legacy fallback only)')
     
     parser.add_argument('--calendar-file',
-                       help='Path to parsed Google Calendar events file')
+                       help='Path to parsed Google Calendar events file (legacy fallback only)')
     
     parser.add_argument('--output-dir',
                        help='Directory for output files')

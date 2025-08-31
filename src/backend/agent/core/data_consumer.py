@@ -4,12 +4,71 @@ from typing import List, Dict, Any, Optional
 from .models import RawActivity
 
 class DataConsumer:
-    """Handles loading and processing data from notion and calendar parsers."""
+    """Handles loading and processing data from database (updated for database-first architecture)."""
     
-    def __init__(self, notion_file: str = 'parsed_notion_content.json', 
-                 calendar_file: str = 'parsed_google_calendar_events.json'):
+    def __init__(self, notion_file: str = None, calendar_file: str = None):
+        # Keep file parameters for backwards compatibility, but prefer database
         self.notion_file = notion_file
         self.calendar_file = calendar_file
+        self._db_manager = None
+    
+    def _get_db_manager(self):
+        """Get database manager instance."""
+        if self._db_manager is None:
+            try:
+                import sys
+                from pathlib import Path
+                
+                # Add project root to path if needed
+                current_file = Path(__file__).resolve()
+                project_root = current_file.parent.parent.parent.parent
+                if str(project_root) not in sys.path:
+                    sys.path.insert(0, str(project_root))
+                
+                from src.backend.database import get_db_manager, RawActivityDAO
+                self._db_manager = get_db_manager()
+                self._raw_activity_dao = RawActivityDAO
+            except ImportError as e:
+                print(f"Warning: Database not available, falling back to JSON files: {e}")
+                self._db_manager = None
+        
+        return self._db_manager
+    
+    def load_raw_activities_from_database(self, hours_filter: int = 24*7) -> List[RawActivity]:
+        """Load raw activities directly from database (preferred method)."""
+        db_manager = self._get_db_manager()
+        
+        if db_manager is None:
+            print("Database not available, falling back to JSON file loading")
+            return self.load_all_raw_activities()  # Fallback to old method
+        
+        try:
+            # Get raw activities from database
+            raw_activities_db = self._raw_activity_dao.get_all()
+            
+            # Convert database models to agent models
+            raw_activities = []
+            for activity_db in raw_activities_db:
+                # Convert database model to agent model
+                raw_activity = RawActivity(
+                    activity_id=f"{activity_db.source}_{activity_db.id}",
+                    date=activity_db.date,
+                    time=activity_db.time,
+                    duration_minutes=activity_db.duration_minutes,
+                    details=activity_db.details,
+                    source=activity_db.source,
+                    orig_link=activity_db.orig_link,
+                    raw_data=activity_db.raw_data or {}
+                )
+                raw_activities.append(raw_activity)
+            
+            print(f"Loaded {len(raw_activities)} raw activities from database")
+            return raw_activities
+            
+        except Exception as e:
+            print(f"Error loading from database: {e}")
+            print("Falling back to JSON file loading")
+            return self.load_all_raw_activities()  # Fallback to old method
     
     def load_notion_data(self) -> List[Dict[str, Any]]:
         """Load parsed Notion data from JSON file."""

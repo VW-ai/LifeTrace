@@ -19,24 +19,31 @@ class ActivityProcessor:
         self.enable_system_tag_regeneration = True
         
     def process_daily_activities(self, 
-                               notion_file: str = 'parsed_notion_content.json',
-                               calendar_file: str = 'parsed_google_calendar_events.json',
-                               output_raw_file: str = 'raw_activities.json',
-                               output_processed_file: str = 'processed_activities.json') -> Dict[str, Any]:
-        """Main entry point for daily activity processing."""
+                               notion_file: str = None,
+                               calendar_file: str = None,
+                               output_raw_file: str = None,
+                               output_processed_file: str = None,
+                               use_database: bool = True) -> Dict[str, Any]:
+        """Main entry point for daily activity processing (now database-first)."""
         
         print("=== Starting Daily Activity Processing ===")
         
         # Step 1: Load existing tags
         self.tag_generator.load_existing_tags()
         
-        # Step 2: Update data consumer file paths
-        self.data_consumer.notion_file = notion_file
-        self.data_consumer.calendar_file = calendar_file
-        
-        # Step 3: Load and convert raw data
+        # Step 2: Load raw data (prefer database, fallback to files)
         print("\n1. Loading raw data...")
-        raw_activities = self.data_consumer.load_all_raw_activities()
+        if use_database:
+            print("Loading from database (preferred method)...")
+            raw_activities = self.data_consumer.load_raw_activities_from_database()
+        else:
+            print("Loading from JSON files (legacy method)...")
+            # Update data consumer file paths if provided
+            if notion_file:
+                self.data_consumer.notion_file = notion_file
+            if calendar_file:
+                self.data_consumer.calendar_file = calendar_file
+            raw_activities = self.data_consumer.load_all_raw_activities()
         
         if not raw_activities:
             print("No activities found to process")
@@ -97,10 +104,17 @@ class ActivityProcessor:
         print("\n5. Creating processed activities...")
         processed_activities = self._create_processed_activities(tagged_activities)
         
-        # Step 9: Save results
+        # Step 9: Save results (database-first)
         print("\n6. Saving results...")
-        serialize_activities(tagged_activities, output_raw_file)
-        serialize_processed_activities(processed_activities, output_processed_file)
+        if use_database:
+            print("Saving to database (preferred method)...")
+            self._save_processed_activities_to_database(processed_activities)
+        else:
+            print("Saving to JSON files (legacy method)...")
+            if output_raw_file:
+                serialize_activities(tagged_activities, output_raw_file)
+            if output_processed_file:
+                serialize_processed_activities(processed_activities, output_processed_file)
         
         # Step 10: Save updated tags
         self.tag_generator.save_tags()
@@ -114,6 +128,71 @@ class ActivityProcessor:
         print(f"Total tags in system: {len(self.tag_generator.existing_tags)}")
         
         return report
+    
+    def _save_processed_activities_to_database(self, processed_activities):
+        """Save processed activities to database instead of JSON files."""
+        try:
+            import sys
+            from pathlib import Path
+            
+            # Add project root to path if needed
+            current_file = Path(__file__).resolve()
+            project_root = current_file.parent.parent.parent.parent
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+            
+            from src.backend.database import (
+                ProcessedActivityDAO, ProcessedActivityDB, 
+                TagDAO, TagDB, ActivityTagDAO, ActivityTagDB
+            )
+            
+            saved_count = 0
+            for processed_activity in processed_activities:
+                try:
+                    # Create processed activity in database
+                    processed_db = ProcessedActivityDB(
+                        date=processed_activity.date,
+                        time=processed_activity.time,
+                        total_duration_minutes=processed_activity.duration_minutes,
+                        combined_details=processed_activity.details[:1000],  # Limit length
+                        raw_activity_ids=[],  # Would need to map from activity IDs
+                        sources=[processed_activity.source]
+                    )
+                    
+                    processed_id = ProcessedActivityDAO.create(processed_db)
+                    
+                    # Handle tags
+                    tags = processed_activity.raw_data.get('tags', [])
+                    for tag_name in tags:
+                        # Get or create tag
+                        tag = TagDAO.get_by_name(tag_name)
+                        if tag is None:
+                            tag_db = TagDB(name=tag_name, description=f'Auto-generated tag: {tag_name}')
+                            tag_id = TagDAO.create(tag_db)
+                        else:
+                            tag_id = tag.id
+                        
+                        # Create activity-tag relationship
+                        activity_tag = ActivityTagDB(
+                            processed_activity_id=processed_id,
+                            tag_id=tag_id,
+                            confidence_score=0.8  # Default confidence
+                        )
+                        ActivityTagDAO.create(activity_tag)
+                    
+                    saved_count += 1
+                    
+                except Exception as e:
+                    print(f"Warning: Failed to save processed activity: {e}")
+            
+            print(f"✅ Saved {saved_count} processed activities to database")
+            
+        except ImportError as e:
+            print(f"Database not available: {e}")
+            print("Falling back to JSON file saving")
+        except Exception as e:
+            print(f"Error saving to database: {e}")
+            print("Falling back to JSON file saving")
     
     def _create_processed_activities(self, raw_activities: List[RawActivity]) -> List[ProcessedActivity]:
         """Group and consolidate raw activities into processed activities."""

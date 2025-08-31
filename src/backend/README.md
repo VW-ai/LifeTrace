@@ -32,12 +32,13 @@ src/backend/
 
 ### AI Agent (`agent/`)
 
-The AI Agent is the heart of SmartHistory's data processing pipeline. It:
+The AI Agent is the heart of SmartHistory's data processing pipeline. It operates on a **database-first architecture**, eliminating JSON intermediate files:
 
 - **Matches activities** across different data sources (Notion, Google Calendar)
 - **Generates intelligent tags** using LLM integration
 - **Estimates durations** for untracked activities
 - **Consolidates data** into structured activity records
+- **Database-first**: All data flows through SQLite database for better performance and reliability
 
 #### Key Features:
 - 🔗 **Smart Matching**: Correlates activities using time and content similarity
@@ -48,10 +49,11 @@ The AI Agent is the heart of SmartHistory's data processing pipeline. It:
 
 ### Parsers (`parsers/`)
 
-Data source parsers extract and structure raw data:
+Data source parsers extract and structure raw data directly into the database:
 
-- **Google Calendar Parser**: Extracts calendar events with timing information
-- **Notion Parser**: Processes Notion blocks and hierarchical content
+- **Google Calendar Parser**: Extracts calendar events with timing information and saves to database
+- **Notion Parser**: Processes Notion blocks and hierarchical content and saves to database
+- **Database-first**: No JSON intermediate files - data goes directly from source to SQLite database
 
 ### Test Features (`test_features/`)
 
@@ -80,16 +82,22 @@ NOTION_API_KEY=your-notion-api-key
 # ... other keys
 ```
 
-### 3. Run the AI Agent
+### 3. Run Parsers (Database-First)
 ```bash
-# Quick test with sample data
+# Parse and save data directly to database
+python run_parsers.py
+```
+
+### 4. Run the AI Agent
+```bash
+# Quick test with database data
 python src/backend/test_features/agent_tests/test_agent_capabilities.py
 
-# Process real data (daily mode)
-python -m src.backend.agent.core.agent --mode daily
+# Process database data (daily mode)
+python run_agent.py --mode daily
 
 # Generate insights from processed data
-python -m src.backend.agent.core.agent --mode insights
+python run_agent.py --mode insights
 ```
 
 ## Usage Examples
@@ -102,12 +110,10 @@ from src.backend.agent import ActivityProcessor, load_api_key
 api_key = load_api_key()
 processor = ActivityProcessor(openai_api_key=api_key)
 
-# Process daily activities
+# Process daily activities (database-first approach)
 report = processor.process_daily_activities(
-    notion_file='parsed_notion_content.json',
-    calendar_file='parsed_google_calendar_events.json',
-    output_raw_file='raw_activities.json',
-    output_processed_file='processed_activities.json'
+    use_database=True  # Reads from database, saves to database
+    # Optional legacy file parameters available for fallback
 )
 ```
 

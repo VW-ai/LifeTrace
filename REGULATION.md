@@ -26,8 +26,9 @@ To ensure that the project remains understandable and that the purpose of comple
 - **Example**: If we create a complex `PropertyRecommender` service within the `agent` package, it must be located alongside a `PropertyRecommender_METAr.md` file that explains its algorithm and usage.
 
 ### 2.5 Proper File Structure
-- Files Serve different functionality at different level of our service should be put into different folder, with a name of the folder that can explain its content concisely.
-- Working with the `Principle of Co-located Documentation`, each folder should have one and only one META.md that describes all of its content, like scripts, sub-folders. 
+- Files Serve different functionality at different level of our service should be put into different folder or sub-folder, with a name of the folder that can explain its content concisely.
+- Working with the `Principle of Co-located Documentation`, each folder should have one and only one META.md that describes all of its content, like scripts, sub-folders
+- Properly use sub-folders to organized our code, understand our file structure as a tree, and any non-leaf node should not have too many files, or no file at all if logically there is no file at the abstract level.
 
 ### 2.6 Comments and Code Style
 - Adapt Google Style in specific code writing

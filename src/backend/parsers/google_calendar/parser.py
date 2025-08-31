@@ -70,32 +70,68 @@ def parse_calendar_events(events, hours_since_last_update, now=None):
     
     return parsed_data
 
-def main(input_file='google_calendar_events.json', output_file='parsed_google_calendar_events.json', hours_since_last_update=24):
-    """Main function to parse Google Calendar events."""
+def parse_to_database(input_file='google_calendar_events.json', hours_since_last_update=24):
+    """Parse Google Calendar events and save directly to database."""
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
             events = json.load(f)
     except FileNotFoundError:
         print(f"Error: Input file not found at {input_file}")
-        return
+        return 0
     except json.JSONDecodeError:
         print(f"Error: Invalid JSON in {input_file}")
-        return
+        return 0
     
     # Ensure events is a list
     if not isinstance(events, list):
         print(f"Error: Expected a list of events in {input_file}")
-        return
+        return 0
     
     parsed_data = parse_calendar_events(events, hours_since_last_update)
     
+    # Save directly to database
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(parsed_data, f, ensure_ascii=False, indent=4)
+        import sys
+        from pathlib import Path
         
-        print(f"Successfully parsed {len(parsed_data)} calendar events and saved to {output_file}")
-    except IOError as e:
-        print(f"Error writing to {output_file}: {e}")
+        # Add project root to path for database imports
+        current_file = Path(__file__).resolve()
+        project_root = current_file.parent.parent.parent.parent
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+        
+        from src.backend.database import RawActivityDAO, RawActivityDB
+        
+        activities_saved = 0
+        for event in parsed_data:
+            try:
+                raw_activity = RawActivityDB(
+                    date=event.get('date', '2025-08-31'),
+                    time=event.get('time'),
+                    duration_minutes=event.get('duration_minutes', 0),
+                    details=event.get('summary', ''),
+                    source='google_calendar',
+                    orig_link=event.get('link', ''),
+                    raw_data=event
+                )
+                
+                RawActivityDAO.create(raw_activity)
+                activities_saved += 1
+                
+            except Exception as e:
+                print(f"Warning: Failed to save activity: {e}")
+        
+        print(f"Successfully parsed and saved {activities_saved} calendar activities to database")
+        return activities_saved
+        
+    except Exception as e:
+        print(f"Error saving to database: {e}")
+        return 0
+
+def main(input_file='google_calendar_events.json', output_file='parsed_google_calendar_events.json', hours_since_last_update=24):
+    """Main function - backwards compatible but now database-first."""
+    print("Note: Parser now saves directly to database. JSON output is deprecated.")
+    return parse_to_database(input_file, hours_since_last_update)
 
 if __name__ == '__main__':
     main()

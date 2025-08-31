@@ -38,3 +38,28 @@ wheels/
 htmlcov/
 tests/backend/__pycache__/
 tests/backend/__pycache__/*
+
+# Database Files
+*.db
+*.db-*
+smarthistory.db
+smarthistory_backup_*.db
+
+# Agent Output Directories
+agent_output/
+agent_test_output/
+agent_results/
+processed_activities/
+
+# Legacy JSON Files (Database-First Architecture - these are now optional)
+parsed_notion_content.json
+parsed_google_calendar_events.json
+raw_activities.json
+processed_activities.json
+
+# Temporary and Log Files
+*.log
+*.tmp
+.DS_Store
+*.swp
+*.swo
