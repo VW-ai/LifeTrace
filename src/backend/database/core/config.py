@@ -6,6 +6,7 @@ Handles database connection configuration and validation
 following the atomic responsibility principle.
 """
 
+import os
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
@@ -15,7 +16,7 @@ class ConnectionConfig:
     """Database connection configuration with validation."""
     
     # Connection settings
-    db_path: str = "smarthistory.db"
+    db_path: str = os.getenv('SMARTHISTORY_DB_PATH', 'smarthistory.db')
     timeout: float = 30.0
     check_same_thread: bool = False
     isolation_level: Optional[str] = None  # autocommit mode

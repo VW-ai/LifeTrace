@@ -153,16 +153,16 @@ class ActivityProcessor:
                     processed_db = ProcessedActivityDB(
                         date=processed_activity.date,
                         time=processed_activity.time,
-                        total_duration_minutes=processed_activity.duration_minutes,
-                        combined_details=processed_activity.details[:1000],  # Limit length
-                        raw_activity_ids=[],  # Would need to map from activity IDs
-                        sources=[processed_activity.source]
+                        total_duration_minutes=processed_activity.total_duration_minutes,
+                        combined_details=processed_activity.combined_details[:1000],  # Limit length
+                        raw_activity_ids=processed_activity.raw_activity_ids,  # Use the actual raw activity IDs
+                        sources=processed_activity.sources
                     )
                     
                     processed_id = ProcessedActivityDAO.create(processed_db)
                     
                     # Handle tags
-                    tags = processed_activity.raw_data.get('tags', [])
+                    tags = processed_activity.tags
                     for tag_name in tags:
                         # Get or create tag
                         tag = TagDAO.get_by_name(tag_name)
@@ -217,7 +217,7 @@ class ActivityProcessor:
                 processed_activity = ProcessedActivity(
                     date=activity.date,
                     time=activity.time,
-                    raw_activity_ids=[f"{activity.source}_{hash(activity.details)}"],  # Simple ID generation
+                    raw_activity_ids=[str(abs(hash(f"{activity.source}_{activity.date}_{activity.details}")))[:8]],  # Simple ID generation
                     tags=tags,
                     total_duration_minutes=activity.duration_minutes,
                     combined_details=activity.details,

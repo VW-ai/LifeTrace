@@ -18,7 +18,7 @@ import argparse
 from pathlib import Path
 
 # Add src to Python path
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent  # Go up one level to actual project root
 sys.path.insert(0, str(PROJECT_ROOT))
 
 def run_daily_processing(args):

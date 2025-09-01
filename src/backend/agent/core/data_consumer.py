@@ -34,7 +34,7 @@ class DataConsumer:
         
         return self._db_manager
     
-    def load_raw_activities_from_database(self, hours_filter: int = 24*7) -> List[RawActivity]:
+    def load_raw_activities_from_database(self, hours_filter: int = 24*3) -> List[RawActivity]:
         """Load raw activities directly from database (preferred method)."""
         db_manager = self._get_db_manager()
         
@@ -43,12 +43,17 @@ class DataConsumer:
             return self.load_all_raw_activities()  # Fallback to old method
         
         try:
-            # Get raw activities from database
+            # Get raw activities from database - limit to first 3 days for testing
             raw_activities_db = self._raw_activity_dao.get_all()
+            
+            # Filter to first 3 days only
+            first_dates = ['2025-08-01', '2025-08-02', '2025-08-03']
+            filtered_activities_db = [activity for activity in raw_activities_db 
+                                    if activity.date in first_dates]
             
             # Convert database models to agent models
             raw_activities = []
-            for activity_db in raw_activities_db:
+            for activity_db in filtered_activities_db:
                 # Convert database model to agent model
                 raw_activity = RawActivity(
                     date=activity_db.date,
@@ -61,7 +66,7 @@ class DataConsumer:
                 )
                 raw_activities.append(raw_activity)
             
-            print(f"Loaded {len(raw_activities)} raw activities from database")
+            print(f"Loaded {len(raw_activities)} raw activities from database (filtered to first 3 days)")
             return raw_activities
             
         except Exception as e:

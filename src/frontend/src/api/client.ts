@@ -157,8 +157,8 @@ class ApiClient {
     if (limit) params.append('limit', limit.toString());
     if (offset) params.append('offset', offset.toString());
     if (source) params.append('source', source);
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
+    if (startDate) params.append('date_start', startDate);
+    if (endDate) params.append('date_end', endDate);
 
     const query = params.toString();
     return this.request(`/activities/raw${query ? `?${query}` : ''}`);
@@ -170,21 +170,52 @@ class ApiClient {
     tags?: string[],
     startDate?: string,
     endDate?: string
-  ): Promise<ApiResponse<ProcessedActivity[]>> {
+  ): Promise<ApiResponse<{activities: ProcessedActivity[], total_count: number}>> {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());
     if (offset) params.append('offset', offset.toString());
     if (tags) tags.forEach(tag => params.append('tags', tag));
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
+    if (startDate) params.append('date_start', startDate);
+    if (endDate) params.append('date_end', endDate);
 
     const query = params.toString();
-    return this.request(`/activities/processed${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/activities/processed${query ? `?${query}` : ''}`);
+    
+    if (response.data && response.data.activities) {
+      // Map backend response to frontend format
+      const mappedActivities = response.data.activities.map((activity: any) => ({
+        id: activity.id,
+        date: activity.date,
+        duration_minutes: activity.total_duration_minutes, // Map total_duration_minutes -> duration_minutes
+        description: activity.combined_details, // Map combined_details -> description
+        tags: activity.tags?.map((tag: any) => tag.name) || [], // Map tag objects to tag names
+        sources: activity.sources || [],
+        raw_activity_ids: activity.raw_activity_ids || [],
+        processed_at: activity.created_at
+      }));
+      
+      return {
+        data: {
+          activities: mappedActivities,
+          total_count: response.data.total_count || 0
+        },
+        status: response.status
+      };
+    }
+    
+    return response;
   }
 
   // Tags endpoints
   async getTags(): Promise<ApiResponse<Tag[]>> {
-    return this.request('/tags/');
+    const response = await this.request<{tags: Tag[], total_count: number}>('/tags/');
+    if (response.data && response.data.tags) {
+      return {
+        data: response.data.tags,
+        status: response.status
+      };
+    }
+    return response;
   }
 
   async createTag(tag: Omit<Tag, 'id' | 'usage_count' | 'created_at'>): Promise<ApiResponse<Tag>> {
@@ -213,8 +244,8 @@ class ApiClient {
     endDate?: string
   ): Promise<ApiResponse<Array<{ tag: string; total_duration: number; activity_count: number }>>> {
     const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
+    if (startDate) params.append('date_start', startDate);
+    if (endDate) params.append('date_end', endDate);
 
     const query = params.toString();
     return this.request(`/insights/tag-distribution${query ? `?${query}` : ''}`);
@@ -226,8 +257,8 @@ class ApiClient {
     groupBy: 'day' | 'week' | 'month' = 'day'
   ): Promise<ApiResponse<Array<{ date: string; total_duration: number; activity_count: number }>>> {
     const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
+    if (startDate) params.append('date_start', startDate);
+    if (endDate) params.append('date_end', endDate);
     params.append('group_by', groupBy);
 
     const query = params.toString();
