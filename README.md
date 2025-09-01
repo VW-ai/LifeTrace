@@ -1,41 +1,128 @@
-# Smart History
+# SmartHistory - Activity Analytics Platform
 
-This product will track your time. It will tell you where your hours go. It will do this automatically.
+A modern, industry-ready platform for processing and analyzing activity data from various sources like Notion and Google Calendar.
 
-## What It Does
+## 🚀 Quick Start
 
-Smart History reads your calendar and notes. It finds patterns in how you spend time. It shows you data about your activities over weeks, years, decades.
+```bash
+# Start development environment
+./runner/deploy.sh local
 
-The system runs daily at 2 AM. It pulls from Notion and Notion Calendar. It saves organized events to a database. You get charts and breakdowns of your time.
+# Or start with Docker
+./runner/deploy.sh docker
+```
 
-## Current Status
+Access your dashboard at: `http://localhost:5174`
 
-**Under Development**
+## 📁 Project Structure
 
-I am building the MVP. The core features work in development. The product is not ready for users.
+```
+smartHistory/
+├── runner/              # Scripts to run services
+│   ├── deploy.sh        # Unified deployment script
+│   ├── run_agent.py     # AI agent processing
+│   ├── run_api.py       # API server
+│   ├── run_parsers.py   # Data parsers
+│   └── setup_api.py     # API setup
+│
+├── META/                # Project documentation
+│   ├── README.md        # Detailed project information
+│   ├── DESIGN.md        # Architecture design
+│   ├── REGULATION.md    # Development guidelines
+│   ├── PROGRESS.md      # Development progress
+│   └── *.md            # Other documentation
+│
+├── deployment/          # Deployment configurations
+│   ├── DEPLOYMENT.md    # Deployment guide
+│   ├── docker-compose.yml # Local Docker setup
+│   ├── Dockerfile.*     # Container definitions
+│   ├── aws/            # AWS deployment configs
+│   └── nginx.conf      # Reverse proxy config
+│
+├── src/                # Source code
+│   ├── backend/        # FastAPI backend
+│   └── frontend/       # React frontend
+│
+├── tests/              # Test suites
+├── test_features/      # Feature tests
+├── .env                # Environment variables
+├── credentials.json    # Service credentials
+├── token.json         # Authentication tokens
+├── smarthistory.db    # SQLite database
+├── pytest.ini        # Test configuration
+└── requirements-api.txt # Python dependencies
+```
 
-## Target Users
+## 🏃‍♂️ Runner Scripts
 
-People who want to understand their time patterns. People who use Notion for planning. People who value data-driven insights about their daily habits.
+### `./runner/deploy.sh`
+Unified deployment script supporting multiple environments:
+- `local` - Start development servers
+- `docker` - Docker Compose deployment
+- `production` - Production deployment
+- `aws` - AWS ECS deployment
 
-## Value Proposition
+### `./runner/run_api.py`
+Standalone API server runner with database setup.
 
-Most people cannot tell you how they spent last month. This product can. It turns scattered calendar entries and notes into clear time reports.
+### `./runner/run_parsers.py`
+Data parsing utilities for Notion and Google Calendar.
 
-## Technical Overview
+### `./runner/run_agent.py`
+AI agent for intelligent activity processing.
 
-- Daily automated data collection from Notion/Calendar
-- AI-powered activity detection and categorization  
-- Database storage for historical analysis
-- Frontend dashboard with trend charts and breakdowns
-- Time range filtering for flexible reporting
+## 📚 Documentation (META/)
 
-## Status Update
+All project documentation is organized in the `META/` directory:
 
-The system architecture is defined. Core parsing components exist. Database design is complete. Frontend development is next.
+- **README.md** - Comprehensive project documentation
+- **DESIGN.md** - System architecture and design decisions  
+- **REGULATION.md** - Development guidelines and standards
+- **API_QUICKSTART.md** - API usage guide
+- **DEPLOYMENT.md** - Detailed deployment instructions
 
-This is an active project. Features change weekly. Documentation updates with each sprint.
+## 🐳 Deployment (deployment/)
 
----
+Industry-ready deployment configurations:
 
-*Note: This product focuses on personal time tracking only. No team collaboration features planned for MVP.*
+- **Docker containers** with multi-stage builds
+- **Kubernetes** manifests for orchestration
+- **Cloud provider** specific configurations (AWS, GCP, Azure)
+- **CI/CD pipelines** for automated deployment
+
+## ⚙️ Configuration Files (Root)
+
+Core configuration files remain in the root:
+
+- `.env` - Environment variables
+- `credentials.json` - Service account credentials
+- `token.json` - API tokens
+- `smarthistory.db` - SQLite database
+- `pytest.ini` - Test configuration
+- `requirements-api.txt` - Python dependencies
+
+## 🔧 Development
+
+1. **Setup**: Copy service credentials to root directory
+2. **Backend**: `cd src/backend && python start.py development`  
+3. **Frontend**: `cd src/frontend && npm run dev`
+4. **Database**: SQLite file created automatically
+
+## 🏗️ Architecture
+
+- **Backend**: FastAPI with dynamic configuration
+- **Frontend**: React + TypeScript + Vite
+- **Database**: SQLite (dev) / PostgreSQL (prod)
+- **Deployment**: Docker + Kubernetes ready
+- **Monitoring**: Prometheus + Grafana integration
+
+## 📊 Features
+
+- **Multi-source parsing** (Notion, Google Calendar)
+- **AI-powered processing** for intelligent categorization
+- **Real-time dashboard** with analytics
+- **Professional UI** with responsive design
+- **Industry-ready deployment** with monitoring
+- **Cloud-native architecture** for scalability
+
+For detailed information, see documentation in the `META/` directory.

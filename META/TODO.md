@@ -208,3 +208,13 @@ We follow an append-only strategy in the writing of thie file.
 - **Flexibility Built-in:** Styled-components and theme system enable rapid design iteration and A/B testing.
 - **Functional Foundation:** Core logic (API integration, state management, routing) remains stable regardless of visual design choices.
 - **Migration Path:** Easy transition between design systems using existing component interfaces and props structure.
+
+--- 
+### Next Steps (as of 2025-08-30)
+The following are manually written, You should reorgniaze it for formatting.
+1. API is not correctly retrieving database from our database
+    1.1 Why is our testing pass even in such case? Maybe we need to fix some tests?
+    1.2 We need to fix our APi
+2. Frontend upgrade
+    1. The top5 section in our templateLook is not being mirrored into our frontend development.
+    2. We should 

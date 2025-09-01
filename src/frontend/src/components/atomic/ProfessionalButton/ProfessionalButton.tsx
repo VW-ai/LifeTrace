@@ -126,7 +126,9 @@ const getButtonSize = (size: ButtonSize) => {
   }
 };
 
-const StyledButton = styled.button<ProfessionalButtonProps>`
+const StyledButton = styled.button.withConfig({
+  shouldForwardProp: (prop) => !['variant', 'size', 'fullWidth', 'loading'].includes(prop),
+})<ProfessionalButtonProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;

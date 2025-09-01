@@ -3,17 +3,21 @@ FastAPI Server Implementation
 
 Main FastAPI application with all endpoints for the SmartHistory API.
 Provides REST interface for frontend consumption of activity processing capabilities.
+Industry-ready with dynamic configuration and deployment support.
 """
 
 import os
 import sys
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+import uvicorn
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
@@ -23,26 +27,46 @@ from .models import *
 from .services import ActivityService, TagService, InsightsService, ProcessingService, SystemService
 from .dependencies import get_activity_service, get_tag_service, get_insights_service, get_processing_service, get_system_service
 from .auth import get_api_key, get_optional_api_key, check_rate_limit
+from config import get_config
+
+# Get configuration
+config = get_config()
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     
+    # Configure logging
+    logging.basicConfig(
+        level=getattr(logging, config.LOG_LEVEL),
+        format=config.LOG_FORMAT
+    )
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting SmartHistory API in {config.ENVIRONMENT} mode")
+    
     app = FastAPI(
-        title="SmartHistory API",
-        description="REST API for SmartHistory activity processing and analytics",
-        version="1.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc"
+        title=config.TITLE,
+        description=config.DESCRIPTION,
+        version=config.VERSION,
+        docs_url="/docs" if config.DEBUG else None,
+        redoc_url="/redoc" if config.DEBUG else None,
+        debug=config.DEBUG
     )
 
-    # Add CORS middleware
+    # Add security middleware for production
+    if config.ENVIRONMENT == "production":
+        app.add_middleware(
+            TrustedHostMiddleware, 
+            allowed_hosts=["*"]  # Configure this based on your domain
+        )
+
+    # Add CORS middleware with dynamic configuration
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:8080"],  # Frontend origins
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=config.CORS_ORIGINS,
+        allow_credentials=config.CORS_CREDENTIALS,
+        allow_methods=config.CORS_METHODS,
+        allow_headers=config.CORS_HEADERS,
     )
 
     # Add error handlers
@@ -83,8 +107,8 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
-    # API v1 prefix
-    API_V1_PREFIX = "/api/v1"
+    # API v1 prefix from configuration
+    API_V1_PREFIX = config.API_V1_PREFIX
 
     # Activities Endpoints
     @app.get(f"{API_V1_PREFIX}/activities/raw", response_model=PaginatedActivitiesResponse)
@@ -280,3 +304,21 @@ def get_api_app() -> FastAPI:
     if _app_instance is None:
         _app_instance = create_app()
     return _app_instance
+
+
+def run_server():
+    """Run the server with configuration-based settings"""
+    uvicorn.run(
+        "api.server:get_api_app",
+        factory=True,
+        host=config.HOST,
+        port=config.PORT,
+        reload=config.RELOAD,
+        log_level=config.LOG_LEVEL.lower(),
+        access_log=True,
+        use_colors=True,
+    )
+
+
+if __name__ == "__main__":
+    run_server()

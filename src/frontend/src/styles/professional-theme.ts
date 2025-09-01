@@ -5,18 +5,18 @@
 
 export const professionalTheme = {
   colors: {
-    // Primary Brand Colors
-    primary: '#2563EB', // Professional blue
-    primaryHover: '#1D4ED8',
-    primaryLight: '#DBEAFE',
+    // Primary Brand Colors (Orange artistic theme from template)
+    primary: '#ea580c', // Artistic orange
+    primaryHover: '#dc2626',
+    primaryLight: '#fffbeb',
     
     // Secondary Colors
-    secondary: '#64748B', // Neutral gray-blue
-    secondaryHover: '#475569',
-    secondaryLight: '#F1F5F9',
+    secondary: '#f97316', // Orange secondary
+    secondaryHover: '#ea580c',
+    secondaryLight: '#fefce8',
     
     // Accent Colors for Data Visualization
-    accent: '#10B981', // Success green
+    accent: '#f97316', // Orange accent
     accentWarning: '#F59E0B', // Warning amber
     accentDanger: '#EF4444', // Error red
     accentInfo: '#06B6D4', // Info cyan
@@ -30,16 +30,16 @@ export const professionalTheme = {
     border: '#E2E8F0',
     borderLight: '#F1F5F9',
     
-    // Data Visualization Colors (for charts/graphs)
+    // Data Visualization Colors (artistic gradient palette from template)
     dataViz: [
-      '#2563EB', // Blue
-      '#10B981', // Green  
-      '#F59E0B', // Amber
-      '#EF4444', // Red
-      '#8B5CF6', // Purple
-      '#06B6D4', // Cyan
-      '#F97316', // Orange
-      '#EC4899', // Pink
+      '#ffcc00', // Chart 1 - Golden yellow
+      '#ff6600', // Chart 2 - Orange  
+      '#ff3300', // Chart 3 - Red
+      '#ff9900', // Chart 4 - Amber
+      '#ea580c', // Chart 5 - Primary orange
+      '#06B6D4', // Cyan for contrast
+      '#8B5CF6', // Purple for variety
+      '#EC4899', // Pink accent
     ]
   },
   
