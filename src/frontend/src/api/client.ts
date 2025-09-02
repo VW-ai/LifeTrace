@@ -215,7 +215,12 @@ class ApiClient {
         status: response.status
       };
     }
-    return response;
+    // Return empty array if no tags data available
+    return {
+      data: [],
+      status: response.status,
+      error: response.error
+    };
   }
 
   async createTag(tag: Omit<Tag, 'id' | 'usage_count' | 'created_at'>): Promise<ApiResponse<Tag>> {
