@@ -36,3 +36,76 @@ embedding可以帮助我们在global下找到对应的context。R@100够高就�
 我们只对notion的”leaf blocks”的`abstract`做embedding。也就是ignore heading啥的那些，那些我们不直接生成（但是我们生成leaf的时候会把所有的上面几层layer的block的内容放进text里）
 
 然后当我们需要做global 的context finding 时，就可以用一个title 的embedding去找到对应的几个leaf block，再由大模型去reason，这些个match到的对不对。（高级一点的话我们甚至可以build 一个proximity graph based on embedding，但这个记为高级TODO就好了。）
+
+---
+
+## Discussion Session Log (2025-09-01) - Architecture Deep Dive
+
+### Core Problem Analysis 
+**Identified Issues with Current Approach:**
+1. **Generic AI Approach Fails on Personal Data**: Our agent uses generic semantic matching that doesn't understand personal shorthand/scrambled calendar entries like "bytediff debug", "CI/CD过", "单测过"
+2. **Missing Personal Context**: Calendar entries are compressed personal notation - "bytediff" means nothing without knowing it's your work project context
+3. **Equal Treatment of Different Data Types**: Currently treating Calendar (scrambled shorthand) and Notion (detailed reflections) as equivalent events to merge, when they serve completely different purposes
+
+### Personal Wording Pattern Analysis
+**Calendar Patterns Discovered:**
+- **Bilingual Technical Shorthand**: "bytedance", "CI/CD过", "branch的merge" 
+- **Project-Specific Codes**: "bytediff debug", "smartHistory开发"  
+- **Personal Routines**: "eat", "rest", "厕所", "午休"
+- **Mixed Language Work Terms**: "周会", "前端接口会" + English technical terms
+
+**Notion Patterns Discovered:**
+- **Detailed Reflections**: Long paragraphs about work productivity, feelings
+- **Time-Specific Context**: "今天15:14", "17:41" with detailed thoughts
+- **Work Insights**: Technical challenges, meeting reflections, career planning
+- **Personal Life Integration**: Exercise plans, work-life balance thoughts
+
+### Architectural Paradigm Shift
+**FROM**: Generic activity classification with equal data treatment
+**TO**: Calendar-as-Query + Notion-as-Context knowledge retrieval system
+
+**Key Insight**: Instead of merging scrambled calendar entries with detailed notion text, use calendar entries as **search queries** to find relevant context in your personal Notion knowledge base.
+
+### Implementation Strategy Discussion
+
+#### Phase 1: Database Architecture Redesign
+**Calendar Events**: Separate storage for scrambled shorthand with temporal data
+**Notion Blocks**: Tree-structured storage preserving parent-child relationships  
+**Edit Tracking**: Daily updated block trees for efficient context retrieval
+
+#### Phase 2: Personal Shorthand Intelligence  
+**Pattern Recognition**: Learn personal abbreviations, project codes, routine activities
+**Context Expansion**: AI-powered expansion of compressed entries before processing
+**Bilingual Handling**: Mixed Chinese-English technical terminology understanding
+
+#### Phase 3: Information Retrieval + AI Pipeline
+**Two-Stage Approach**:
+1. **IR Stage**: Embedding-based retrieval (R@100) from recently updated Notion blocks
+2. **AI Reasoning**: LLM contextual matching and abstract generation (30-100 words)
+
+#### Advanced Features (Future)
+**Semantic Proximity Graph**: Connect related activities and projects
+**Learning System**: Improve from user corrections over time  
+**Multi-Calendar Support**: Different context strategies for different calendars
+
+### Design Benefits Identified
+1. **Efficiency**: Only process recently edited content, not full database scans
+2. **Accuracy**: Rich Notion context helps decode scrambled Calendar entries
+3. **Personal**: Learns specific patterns, projects, and terminology  
+4. **User Experience**: Generated abstracts provide meaningful activity context
+5. **Scalable**: IR + AI approach handles growing personal data better than pure AI
+
+### Next Steps Consensus
+**Priority Order**:
+1. Implement separate Calendar vs Notion storage schemas
+2. Build Notion tree structure tracking with edit propagation
+3. Create personal shorthand expansion for calendar entries  
+4. Develop embedding-based Calendar → Notion context retrieval
+5. Build AI context matching and abstract generation pipeline
+
+### Technical Architecture Decisions
+**Calendar as Query**: Scrambled entries become search keys for context discovery
+**Notion as Knowledge Base**: Detailed content provides context for understanding activities
+**Tree Structure Preservation**: Parent-child relationships maintain semantic meaning
+**Embedding Strategy**: Only leaf blocks with full hierarchical context included
+**Abstract Generation**: AI-powered summaries bridge calendar shorthand and rich context
