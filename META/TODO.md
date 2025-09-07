@@ -1,220 +1,168 @@
-# Development2Development
-This TODO is Designed to be update everytime we finished our current development. 
-This TODO serves as a guideline on what we should work on the next time we come back to this project's development.
-And every time we resume to development, we should read TODO first to know where to start
-We follow an append-only strategy in the writing of thie file.
+# Development TODO
+This TODO serves as a guideline for what we should work on next. It tracks both high-level goals and detailed implementation tasks. Updated after each development session to reflect current priorities.
 
 ---
-### Next Steps (as of 2025-08-28)
 
--   **[High Priority] Implement `notion_parser.py`:**
-    -   Read `notion_content.json`.
-    -   Implement recursive parsing of blocks.
-    -   Implement filtering based on `last_edited_time` (with a default of 24 hours).
-    -   Output a structured list of "document" objects as designed.
+## 🎯 **CURRENT MILESTONE: MILESTONE 2 - AI AGENT INTELLIGENCE & PRODUCTION READINESS**
 
--   **[High Priority] Implement `google_calendar_parser.py`:**
-    -   Read `google_calendar_events.json`.
-    -   Implement parsing of events.
-    -   Implement filtering based on the `updated` timestamp (with a default of 24 hours).
-    -   Output a structured list of "document" objects consistent with the Notion parser's output.
-
--   **[Medium Priority] Implement the initial version of the AI agent:**
-    -   The agent should be able to consume the output of both parsers.
-    -   Implement a basic activity identification mechanism using an LLM.
-    -   The agent should save the processed activities to a CSV/JSON file.
+### **Phase 1: AI-Native Tagging System** ✅ **COMPLETED (2025-09-07)**
+- ✅ Taxonomy-first tagging architecture with controlled vocabulary
+- ✅ AI-driven personalized taxonomy and synonym generation  
+- ✅ Confidence-based tag assignment with review workflow foundation
+- ✅ Bilingual support and personal context awareness
 
 ---
-### Next Steps (as of 2025-08-29)
 
--   **[COMPLETED] ✅ Implement `google_calendar_parser.py`:**
-    -   ✅ Read `google_calendar_events.json`.
-    -   ✅ Implement parsing of events with time filtering.
-    -   ✅ Implement filtering based on the `updated` timestamp.
-    -   ✅ Output structured document objects consistent with Notion parser.
-    -   ✅ Add comprehensive testing and documentation.
+## 📋 **ACTIVE DEVELOPMENT PRIORITIES**
 
--   **[High Priority] Implement the AI Agent (`src/backend/agent/`):**
-    -   Create agent directory structure with proper documentation.
-    -   Implement data consumption from both notion and google calendar parsers.
-    -   Design tag generation system with existing tag reuse logic.
-    -   Implement LLM integration for activity categorization and tagging.
-    -   Create raw activity table data structure (Date, Duration, Details, Source, Tags).
-    -   Implement processed activity table with tag consolidation.
-    -   Add agent testing framework.
+### **🚀 URGENT PRIORITY: Real Data Integration & Testing Infrastructure**
 
--   **[High Priority] Database Schema Implementation:**
-    -   Design and implement SQL database schema for raw and processed activity tables.
-    -   Create database connection and CRUD operations.
-    -   Implement data persistence for agent output.
-    -   Add database migration scripts.
+**Data Import & Processing:**
+- **[URGENT] Import 3-Month Recent Calendar Events as Raw Activities**
+  - Create calendar API data collection script or fix existing parsers
+  - Import recent 3 months of actual calendar events into `raw_activities` table
+  - Verify data structure and content quality for enhanced tagging testing
+  - Document data collection workflow for future use
 
--   **[Medium Priority] Agent Intelligence Features:**
-    -   Implement event matching between Notion edits and Calendar events.
-    -   Add time estimation for unscheduled Notion activities.
-    -   Create system-wide tag regeneration when tag:event ratio is too high.
-    -   Implement decision logic for new/merged/abandoned Notion updates.
+- **[URGENT] Generate Processed Activities from Real Calendar Data** 
+  - Run enhanced AI-native tagging system on imported real calendar events
+  - Test personalized taxonomy generation with actual user language patterns
+  - Validate confidence scoring and synonym matching on real data
+  - Demonstrate improved tagging quality vs old hardcoded system
 
--   **[Low Priority] Integration & API Layer:**
-    -   Create internal API endpoints for frontend data consumption.
-    -   Implement data aggregation for charts (line, pie, breakdown list).
-    -   Add time range filtering and query optimization.
+**Development Workflow Enhancement:**
+- **[MEDIUM URGENT] Expose Testing & Management APIs**
+  - Add API endpoints for data import/export operations
+  - Create endpoints for triggering tag regeneration and processing
+  - Build database management APIs (clear data, reset, inspect stats)
+  - Add development helper APIs to reduce need for custom scripts every update
+  - Include debugging endpoints for system state inspection
 
----
-### Next Steps (as of 2025-08-30)
+### **🧠 HIGH PRIORITY: Milestone 2 Phase 2 - Integration & Intelligence**
 
--   **[COMPLETED] ✅ Implement the AI Agent (`src/backend/agent/`):**
-    -   ✅ Created complete agent architecture with modular core/tools/prompts structure.
-    -   ✅ Implemented data consumption from both notion and google calendar parsers.
-    -   ✅ Built tag generation system with existing tag reuse logic and LLM integration.
-    -   ✅ Created raw and processed activity data structures with comprehensive processing.
-    -   ✅ Added comprehensive testing framework with 27 unit tests and integration tests.
-    -   ✅ Achieved production-ready performance and scalability benchmarks.
+**Activity Matching Engine Upgrades:**
+- **[URGENT] Upgrade ActivityMatcher with TF-IDF cosine similarity** 
+  - Replace current Jaccard similarity with TF-IDF for better semantic matching
+  - Implement configurable time window (currently fixed at ±1 day, expand to ±2-3 days)
+  - Add synonym normalization before similarity calculation
+  - Session clustering: group raw events by proximity (≤45 min gaps)
 
--   **[COMPLETED] ✅ Advanced Agent Intelligence Features:**
-    -   ✅ Implemented cross-source event matching between Notion edits and Calendar events.
-    -   ✅ Added time estimation for unscheduled Notion activities using content analysis.
-    -   ✅ Created system-wide tag regeneration with configurable thresholds.
-    -   ✅ Implemented decision logic for activity correlation with confidence scoring.
+- **[HIGH] Enhanced Cross-Source Correlation**
+  - Current merge rate is 0.0% - needs significant improvement
+  - Implement content similarity analysis beyond time-window matching
+  - Add contextual understanding for recurring activities (meetings, work blocks)
+  - Calendar-as-Query + Notion-as-Context retrieval system (from Tagging_Enhance_Proposal)
 
--   **[COMPLETED] ✅ Database Schema Design & Implementation:**
-    -   ✅ Designed comprehensive database schema with all required tables and relationships.
-    -   ✅ Created tables for raw activities, processed activities, tags, user sessions, and activity-tag relationships.
-    -   ✅ Implemented robust database connection layer with connection pooling, error handling, and transaction support.
-    -   ✅ Added full CRUD operations for all data entities with comprehensive validation and type safety.
-    -   ✅ Created migration system with version control, rollback support, and automated schema updates.
-    -   ✅ Designed performance indexes for optimal query performance on date, tag, and source-based queries.
-    -   ✅ Built database CLI tool for management, migration, validation, and debugging operations.
+**Data Enrichment & Context:**
+- **[HIGH] Enrich Parser Output with Additional Context**
+  - Notion: capture parent page titles, database properties, relations, breadcrumbs
+  - Calendar: capture description, attendees, location, recurrence metadata
+  - Store enriched data in `RawActivity.raw_data` JSON field
+  - Implement tree-structure preservation for Notion blocks
 
--   **[COMPLETED] ✅ Backend API Design & Implementation:**
-    -   ✅ Designed and implemented comprehensive RESTful API with 20+ endpoints for all frontend data consumption needs.
-    -   ✅ Created complete CRUD operations for activities, tags, insights, processing, and system management.
-    -   ✅ Implemented service layer architecture with dependency injection, authentication middleware, and rate limiting.
-    -   ✅ Built data aggregation endpoints for dashboard charts (time distribution, tag breakdowns, activity insights).
-    -   ✅ Added comprehensive filtering capabilities with date ranges, tags, sources, and pagination support.
-    -   ✅ Implemented processing trigger endpoints for on-demand data processing and status tracking.
-    -   ✅ Created FastAPI automatic documentation with Swagger UI and comprehensive API specification.
-    -   ✅ Achieved 48/48 API tests passing with complete endpoint validation and error handling.
+- **[MEDIUM] Project Memory & Priors**
+  - Build "project dictionary" with top keywords, typical tags, time patterns
+  - Use priors during tagging for better context-aware categorization
+  - Implement duration estimation for unscheduled Notion activities
 
--   **[HIGH Priority] Frontend Architecture & Design:**
-    -   Design responsive dashboard interface with activity visualization components.
-    -   Create time-based activity charts (daily, weekly, monthly views) with interactive filtering.
-    -   Implement tag-based activity breakdown with pie charts and category analysis.
-    -   Design activity timeline view showing merged activities from multiple sources.
-    -   Add settings interface for tag management, data source configuration, and preferences.
-    -   Implement data refresh mechanisms and real-time updates for live activity tracking.
+### **🔧 MEDIUM PRIORITY: System Integration & Quality**
 
--   **[MEDIUM Priority] Production Infrastructure:**
-    -   Set up database hosting and configuration for production environment.
-    -   Implement proper logging and monitoring for API endpoints and data processing.
-    -   Create deployment scripts and CI/CD pipeline for automated releases.
-    -   Add environment configuration management for development, staging, and production.
-    -   Implement backup and data recovery procedures for user activity data.
+**Confidence-Driven Review Workflow:**
+- **[HIGH] Integrate Confidence Scores with Database**
+  - Update ActivityProcessor to use `generate_tags_with_confidence_for_activity()`
+  - Store confidence scores in `activity_tags.confidence_score` field
+  - Mark `ProcessedActivity.is_review_needed` for confidence < 0.5
 
--   **[MEDIUM Priority] User Experience Enhancements:**
-    -   Add onboarding flow for new users to connect data sources and configure settings.
-    -   Implement data source management interface for Google Calendar and Notion integration.
-    -   Create activity editing capabilities for manual corrections and additions.
-    -   Add notification system for processing completion and data insights.
-    -   Implement data privacy controls and user data management features.
+- **[MEDIUM] Review UI Implementation**
+  - API filter: `GET /api/v1/activities/processed?review_needed=true`
+  - Frontend review inbox for low-confidence activities
+  - Bulk tag merge/rename capabilities
+  - User feedback integration for improving confidence models
 
--   **[LOW Priority] Advanced Analytics & Insights:**
-    -   Implement advanced productivity analytics with trend analysis and recommendations.
-    -   Add activity pattern recognition for identifying productive vs. unproductive time periods.
-    -   Create goal setting and tracking features with progress visualization.
-    -   Implement comparative analytics (week-over-week, month-over-month productivity).
-    -   Add integration capabilities for additional data sources (Apple Calendar, Outlook, etc.).
+**Metrics & Quality Monitoring:**
+- **[MEDIUM] Quality Metrics Implementation**
+  - Track: merge_rate, avg_match_confidence, top_tag_coverage, tag_entropy
+  - API endpoint: `GET /api/v1/system/stats` enhancement
+  - Dashboard cards showing quality trends over time
+  - Review queue size monitoring
+
+### **🚀 LOW PRIORITY: Production Readiness**
+
+**Personalized Taxonomy Deployment:**
+- **[MEDIUM] AI-Generated Taxonomy Integration**
+  - Run `update_taxonomy_from_data()` on user's full dataset
+  - Generate personalized `tag_taxonomy_personalized.json` and `synonyms_personalized.json`
+  - A/B test personalized vs generic taxonomy performance
+  - User interface for taxonomy customization and management
+
+**Advanced Features:**
+- **[LOW] Embedding-Based Context Retrieval**
+  - Implement Calendar → Notion context retrieval using embeddings
+  - Generate abstracts (30-100 words) for matched activities
+  - Semantic proximity graph for related activities
+  - R@100 retrieval system for global context finding
 
 ---
-### Next Steps (as of 2025-08-31)
 
--   **[COMPLETED] ✅ API Testing Infrastructure & Backend Stability:**
-    -   ✅ Fixed all pytest collection errors and resolved Pydantic v2 compatibility issues throughout the codebase.
-    -   ✅ Resolved JSON deserialization problems for database-stored arrays in API responses (sources, raw_activity_ids).
-    -   ✅ Updated error handling from ValueError to proper HTTPException with correct HTTP status codes.
-    -   ✅ Fixed agent integration tests to properly work with database-first architecture using controlled test scenarios.
-    -   ✅ Configured pytest to exclude integration tests from unit test runs for clean CI/CD pipelines.
-    -   ✅ Achieved **96/96 unit tests passing (100%)** across API, Agent, Parser, and Database layers.
+## 🔄 **TECHNICAL DEBT & MAINTENANCE**
 
-## 🎯 **CURRENT TOP PRIORITY: Frontend Implementation**
+**Current System Limitations:**
+- **[MEDIUM] Remove 3-day Processing Limitation**
+  - Currently limited to 3-day subsets for development speed
+  - Scale to full dataset (2,258+ raw activities) processing
+  - Performance optimization for large-scale processing
 
--   **[URGENT - HIGH Priority] Frontend Architecture & Dashboard Implementation:**
-    -   **Primary Goal:** Create the complete frontend application to consume the ready REST API backend.
-    -   Design and implement responsive dashboard interface with modern UI framework (React/Vue/Svelte).
-    -   Create time-based activity visualization components (daily, weekly, monthly charts) with interactive filtering.
-    -   Implement tag-based activity breakdown with pie charts and category analysis for productivity insights.
-    -   Design activity timeline view showing merged activities from multiple data sources with source indicators.
-    -   Build settings interface for tag management, data source configuration, and user preferences.
-    -   Implement data refresh mechanisms and real-time updates for live activity tracking and processing status.
-    -   Add proper error handling and loading states for all API interactions with user feedback.
+- **[LOW] Database Schema Extensions** (Future consideration)
+  - Add `parent_tag_id` to tags table for hierarchy support
+  - Extend `processed_activities` with `is_review_needed` boolean field
+  - Consider separate Calendar vs Notion storage schemas (per Tagging_Enhance_Proposal)
 
--   **[HIGH Priority] Frontend-Backend Integration:**
-    -   Integrate with existing FastAPI backend using the 20+ REST endpoints for complete data consumption.
-    -   Implement authentication flow and API key management for secure backend communication.
-    -   Create data fetching layers with proper error handling, caching, and loading states.
-    -   Build processing trigger interface allowing users to initiate daily activity processing from the frontend.
-    -   Add real-time status updates for long-running processing operations with progress indicators.
+**Frontend Enhancement Needs:**
+- **[MEDIUM] Tag Management Interface**
+  - CRUD interface for taxonomy and tag management
+  - Confidence score visualization and editing
+  - Tag usage analytics and bulk operations
 
--   **[HIGH Priority] User Experience & Dashboard Features:**
-    -   Design intuitive onboarding flow guiding users through data source connection and initial setup.
-    -   Create comprehensive activity dashboard with multiple visualization options and interactive filters.
-    -   Implement tag management interface allowing users to create, edit, and delete activity tags.
-    -   Build activity editing capabilities for manual corrections, additions, and data refinement.
-    -   Add notification system for processing completion, data insights, and system status updates.
+- **[LOW] Advanced Dashboard Features**
+  - Navigation system between dashboard sections
+  - Advanced filtering with confidence score ranges
+  - Export functionality for tagged activity data
 
 ---
-### Next Steps (as of 2025-09-01 - Post Frontend Initialization)
 
--   **[COMPLETED] ✅ Frontend Foundation & Dadaist Design System:**
-    -   ✅ Implemented React + TypeScript frontend with Vite development environment.
-    -   ✅ Created atomic component architecture following REGULATION.md principles.
-    -   ✅ Built ChaoticButton foundation component with 5 variants and chaos control system.
-    -   ✅ Established styled-components theme system with Dadaist design principles.
-    -   ✅ Integrated Framer Motion animations and real-time backend API health monitoring.
-    -   ✅ Resolved all TypeScript compilation errors and achieved production build capability.
+## 📊 **MILESTONE PROGRESS TRACKING**
 
-## 🎨 **CURRENT PRIORITY: Frontend Design Direction & Refinement**
+### **Milestone 2 Scope Coverage:**
+- ✅ **AI Agent Enhancements**: Tagging pipeline complete (Phase 1)
+- 🔄 **Data Enrichment**: Parser upgrades pending
+- 🔄 **Tag Taxonomy + Synonyms**: Base implementation complete, integration pending  
+- ⏳ **Review UI + Rules**: Foundation ready, UI implementation needed
+- ⏳ **Metrics & Monitoring**: API structure ready, implementation needed
+- ⏳ **Production Readiness**: Basic auth exists, privacy controls needed
 
--   **[URGENT - HIGH Priority] Design System Evaluation & Potential Redesign:**
-    -   **Critical Decision Point:** Current Dadaist design implementation requires significant styling adjustments and refinement.
-    -   **Design Direction Assessment:** Evaluate whether to continue with Dadaist approach or transition to more conventional/professional design patterns.
-    -   **Styling System Refactoring:** If moving away from Dadaism, redesign theme system, color palettes, and animation approaches.
-    -   **Component Restyling:** Adapt existing atomic components (ChaoticButton, etc.) to new design direction while maintaining functionality.
-    -   **User Experience Testing:** Assess current Dadaist interface for usability, accessibility, and professional application suitability.
+### **Success Metrics (Milestone 2 Targets):**
+- **Match Rate Goal**: ≥40% (currently 0.0%) 
+- **Tag Coverage Goal**: ≥80% activities mapped to top 12-20 tags
+- **Review Efficiency Goal**: ≤10% activities flagged for review
+- **Confidence Goal**: Average confidence ≥0.6 on processed activities
 
--   **[HIGH Priority] Dashboard Implementation (Design-Agnostic):**
-    -   **Core Dashboard Layout:** Create main productivity dashboard interface consuming backend API data.
-    -   **Activity Timeline View:** Build timeline component displaying merged activities from multiple sources with filtering capabilities.
-    -   **Data Visualization Components:** Implement charts and graphs for productivity insights (time distribution, tag breakdowns, trends).
-    -   **Real-time Data Integration:** Connect dashboard to all 20+ backend REST endpoints with proper loading states and error handling.
-    -   **Responsive Dashboard Design:** Ensure dashboard works effectively across desktop, tablet, and mobile screen sizes.
+---
 
--   **[HIGH Priority] Core User Interface Features:**
-    -   **Navigation System:** Implement routing and navigation between different app sections (dashboard, settings, processing status).
-    -   **Settings Interface:** Create user preferences panel for API configuration, data source management, and display options.
-    -   **Processing Trigger Interface:** Build UI for initiating daily activity processing with progress tracking and status updates.
-    -   **Tag Management System:** Implement full CRUD interface for activity tags with usage analytics and bulk operations.
-    -   **Activity Data Management:** Create interfaces for viewing, editing, and managing raw and processed activity data.
+## 📝 **SESSION PLANNING NOTES**
 
--   **[MEDIUM Priority] Enhanced User Experience:**
-    -   **Authentication Interface:** Implement API key management and user session handling with secure storage.
-    -   **Data Export Functionality:** Build user interfaces for exporting activity data in various formats (CSV, JSON, PDF reports).
-    -   **Advanced Filtering System:** Create sophisticated filtering and search capabilities across all activity data.
-    -   **Notification System:** Implement in-app notifications for processing completion, errors, and system status updates.
-    -   **Performance Optimization:** Optimize frontend performance for large datasets and complex visualizations.
+**Immediate Next Session Priorities:**
+1. **Data Import & Processing** - Get real calendar data into system to test enhanced tagging
+2. **Enhanced API Tooling** - Reduce development friction with management APIs
+3. **Activity Matching Upgrades** - Critical for improving 0.0% merge rate
+4. **Confidence Score Integration** - Leverage completed tagging intelligence
 
-## 📋 **Design Philosophy Notes for Future Development:**
-- **Current Architecture Strength:** Atomic component structure allows complete design system changes without functionality loss.
-- **Flexibility Built-in:** Styled-components and theme system enable rapid design iteration and A/B testing.
-- **Functional Foundation:** Core logic (API integration, state management, routing) remains stable regardless of visual design choices.
-- **Migration Path:** Easy transition between design systems using existing component interfaces and props structure.
+**Dependencies & Considerations:**
+- TF-IDF implementation may require additional libraries (sklearn, numpy)
+- Large dataset processing may need chunking and progress tracking
+- Personalized taxonomy generation requires sufficient activity history
+- Review UI depends on frontend architectural decisions
 
---- 
-### Next Steps (as of 2025-08-30)
-The following are manually written, You should reorgniaze it for formatting.
-1. API is not correctly retrieving database from our database
-    1.1 Why is our testing pass even in such case? Maybe we need to fix some tests?
-    1.2 We need to fix our APi
-2. Frontend upgrade
-    1. The top5 section in our templateLook is not being mirrored into our frontend development.
-    2. We should 
+---
+
+*Last Updated: 2025-09-07 (Post AI-Native Tagging Implementation)*
+*Next Update: After Milestone 2 Phase 2 completion*

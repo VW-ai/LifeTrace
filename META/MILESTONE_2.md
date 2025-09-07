@@ -77,21 +77,25 @@ This document defines the scope, deliverables, and plan for Milestone 2. It oper
 - Tests covering parser enrichment, matcher similarity, and tagging fallback.
 
 ## Phased Execution
-- Phase 1 (high impact, 1–2 sessions):
-  - Implement taxonomy + synonyms; integrate into prompts and fallback mapper.
-  - Upgrade `ActivityMatcher` with TF‑IDF cosine + configurable date window; add synonyms normalization.
-  - Enrich Notion/Calendar parsers with parent/context fields in `raw_data`.
-  - Instrument basic metrics (merge rate, tag coverage) and log to console/API.
 
-- Phase 2:
-  - Add `confidence` to `activity_tags` and `is_review_needed` to `processed_activities`; wire API filters.
-  - Minimal Review Inbox in frontend; bulk tag merge/rename.
-  - Dashboard cards for quality metrics; surface low-confidence counts.
+### Phase 1: AI-Native Tagging Foundation ✅ **COMPLETED (2025-09-07)**
+  - ✅ **Taxonomy + Synonyms Implementation**: Created comprehensive taxonomy with 14 categories and personalized synonym mapping
+  - ✅ **AI-Driven Personalization**: Added methods to generate personalized taxonomy and synonyms from user data
+  - ✅ **Enhanced Prompts & Fallback**: Integrated taxonomy into prompts with structured JSON responses and intelligent fallback
+  - ✅ **Confidence-Based Architecture**: Multi-factor confidence scoring with review workflow foundation
+  - ✅ **Bilingual & Personal Context Support**: Full support for mixed language content and personal shortcuts
 
-- Phase 3:
-  - Session clustering, project priors, duration estimation improvements.
-  - Rules editor (user-defined mapping) and backfill UI.
-  - Optional connectors spike (VS Code/Git, fitness, screen time) behind feature flags.
+### Phase 2: Integration & Intelligence (IN PROGRESS)
+  - 🔄 **ActivityMatcher Upgrades**: Upgrade to TF‑IDF cosine similarity + configurable date window + synonyms normalization
+  - 🔄 **Parser Enrichment**: Add parent/context fields in `raw_data` for Notion/Calendar
+  - ⏳ **Database Integration**: Store confidence scores in `activity_tags` and implement `is_review_needed` flags
+  - ⏳ **Basic Metrics**: Instrument merge rate, tag coverage metrics and expose via API
+
+### Phase 3: Production & Advanced Features (PLANNED)
+  - ⏳ **Review Interface**: Frontend review inbox with bulk tag operations
+  - ⏳ **Dashboard Enhancement**: Quality metric cards and low-confidence activity management
+  - ⏳ **Advanced Features**: Session clustering, project priors, duration estimation
+  - ⏳ **User Customization**: Rules editor for user-defined mappings and taxonomy management
 
 ## Risks & Mitigations
 - Overfitting taxonomy: start small (12–20 tags), measure entropy/coverage, iterate.

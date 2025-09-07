@@ -8,6 +8,7 @@ notion_content.json
 credentials.json
 google_calendar_events.json
 token.json
+.claude/
 
 # Python
 __pycache__/
