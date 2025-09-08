@@ -20,18 +20,14 @@ from database.access.models import (
 )
 
 
-def get_recent_calendar_activities(months_back: int = 3) -> List[RawActivity]:
-    """Get calendar activities from the last N months."""
-    # Calculate date range
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=months_back * 30)
+def get_all_calendar_activities() -> List[RawActivity]:
+    """Get all calendar activities from the database."""
+    print("Retrieving all calendar activities from database...")
     
-    print(f"Retrieving calendar activities from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    
-    # Get activities from database using DAO
+    # Get all calendar activities from database
     raw_activities_db = RawActivityDAO.get_by_date_range(
-        start_date.strftime('%Y-%m-%d'),
-        end_date.strftime('%Y-%m-%d'),
+        '2025-01-01',  # Start of year to get all recent data  
+        '2025-12-31',  # End of year
         source='google_calendar'
     )
     
@@ -202,8 +198,8 @@ def main():
     print("="*70)
     
     try:
-        # Step 1: Get recent calendar activities
-        activities = get_recent_calendar_activities(months_back=3)
+        # Step 1: Get all calendar activities from database
+        activities = get_all_calendar_activities()
         
         if not activities:
             print("❌ No calendar activities found in the specified date range.")

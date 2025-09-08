@@ -1,0 +1,161 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Three-layer hierarchical taxonomy for granular activity classification",
+    "layers": {
+      "1": "Nature - High-level activity type (work, study, personal, etc.)",
+      "2": "Subject - Specific domain/topic within the nature (Web3, smartHistory, CFA, etc.)",
+      "3": "Project - Optional specific project/context (bytediff, personal-website, etc.)"
+    }
+  },
+  "taxonomy": {
+    "work": {
+      "description": "Work-related activities including meetings, development, and professional tasks",
+      "keywords": ["meeting", "development", "work", "project", "team", "职场", "工作"],
+      "subjects": {
+        "bytediff": {
+          "description": "ByteDance related work activities",
+          "keywords": ["bytedance", "bytediff", "字节", "doris"],
+          "projects": ["debug", "CI/CD", "deployment", "code-review"]
+        },
+        "smartHistory": {
+          "description": "SmartHistory project development",
+          "keywords": ["smartHistory", "smart-history", "tagging", "AI"],
+          "projects": ["frontend", "backend", "tagging-system", "database"]
+        },
+        "meetings": {
+          "description": "Work meetings and collaboration",
+          "keywords": ["meeting", "会议", "周会", "discussion", "sync"],
+          "projects": ["team-standup", "project-review", "planning", "one-on-one"]
+        }
+      }
+    },
+    "study": {
+      "description": "Learning and educational activities",
+      "keywords": ["study", "learning", "reading", "course", "学习", "看书"],
+      "subjects": {
+        "web3": {
+          "description": "Web3 and blockchain technology learning",
+          "keywords": ["web3", "blockchain", "crypto", "DeFi", "NFT"],
+          "projects": ["solidity", "ethereum", "defi-protocols", "smart-contracts"]
+        },
+        "cfa": {
+          "description": "CFA exam preparation",
+          "keywords": ["CFA", "finance", "investment", "portfolio", "金融"],
+          "projects": ["level1", "ethics", "quantitative", "economics"]
+        },
+        "computer-science": {
+          "description": "Computer science and programming topics",
+          "keywords": ["CS", "algorithm", "data-structure", "system-design"],
+          "projects": ["leetcode", "system-architecture", "databases", "networking"]
+        },
+        "languages": {
+          "description": "Language learning activities",
+          "keywords": ["language", "english", "chinese", "日语", "语言"],
+          "projects": ["vocabulary", "grammar", "conversation", "writing"]
+        }
+      }
+    },
+    "personal": {
+      "description": "Personal care and daily life activities",
+      "keywords": ["personal", "rest", "break", "个人", "休息", "厕所"],
+      "subjects": {
+        "self-care": {
+          "description": "Personal hygiene and care activities",
+          "keywords": ["shower", "bathroom", "厕所", "洗澡", "护理"],
+          "projects": ["morning-routine", "evening-routine", "skincare"]
+        },
+        "rest": {
+          "description": "Rest and relaxation activities",
+          "keywords": ["rest", "nap", "sleep", "午休", "休息"],
+          "projects": ["afternoon-nap", "meditation", "relaxation"]
+        },
+        "personal-projects": {
+          "description": "Personal side projects and hobbies",
+          "keywords": ["hobby", "side-project", "creative", "兴趣"],
+          "projects": ["blog", "photography", "music", "art"]
+        }
+      }
+    },
+    "exercise": {
+      "description": "Physical fitness and sports activities",
+      "keywords": ["exercise", "workout", "gym", "fitness", "健身", "运动"],
+      "subjects": {
+        "gym": {
+          "description": "Gym-based workouts",
+          "keywords": ["gym", "健身房", "weight", "strength", "cardio"],
+          "projects": ["upper-body", "lower-body", "cardio-session", "strength-training"]
+        },
+        "outdoor": {
+          "description": "Outdoor physical activities",
+          "keywords": ["running", "hiking", "cycling", "outdoor", "户外"],
+          "projects": ["morning-run", "trail-hiking", "bike-commute"]
+        }
+      }
+    },
+    "social": {
+      "description": "Social interactions and relationships",
+      "keywords": ["social", "friend", "family", "gathering", "社交", "朋友"],
+      "subjects": {
+        "friends": {
+          "description": "Time with friends",
+          "keywords": ["friend", "朋友", "hangout", "chat", "聚会"],
+          "projects": ["dinner", "movie", "gaming", "coffee"]
+        },
+        "family": {
+          "description": "Family time and activities",
+          "keywords": ["family", "家人", "parents", "relatives", "home"],
+          "projects": ["family-dinner", "video-call", "visit", "celebration"]
+        }
+      }
+    },
+    "meals": {
+      "description": "Food and dining activities",
+      "keywords": ["food", "eat", "meal", "lunch", "dinner", "吃", "午饭", "晚饭"],
+      "subjects": {
+        "regular-meals": {
+          "description": "Daily meals",
+          "keywords": ["breakfast", "lunch", "dinner", "早饭", "午饭", "晚饭"],
+          "projects": ["home-cooking", "restaurant", "takeout", "meal-prep"]
+        },
+        "social-dining": {
+          "description": "Dining with others",
+          "keywords": ["social", "team", "colleague", "friend", "聚餐"],
+          "projects": ["team-lunch", "business-dinner", "friend-gathering"]
+        }
+      }
+    },
+    "travel": {
+      "description": "Travel and transportation",
+      "keywords": ["travel", "trip", "transport", "commute", "旅行", "出行"],
+      "subjects": {
+        "commute": {
+          "description": "Daily commuting",
+          "keywords": ["commute", "work", "office", "通勤", "上班"],
+          "projects": ["to-office", "from-office", "subway", "taxi"]
+        },
+        "leisure-travel": {
+          "description": "Leisure and vacation travel",
+          "keywords": ["vacation", "trip", "holiday", "tourism", "度假"],
+          "projects": ["weekend-trip", "business-travel", "international", "domestic"]
+        }
+      }
+    },
+    "admin": {
+      "description": "Administrative and organizational tasks",
+      "keywords": ["admin", "paperwork", "organize", "planning", "管理", "整理"],
+      "subjects": {
+        "finance": {
+          "description": "Financial management",
+          "keywords": ["finance", "budget", "investment", "banking", "理财"],
+          "projects": ["expense-tracking", "investment-review", "tax-preparation"]
+        },
+        "organization": {
+          "description": "Personal organization and planning",
+          "keywords": ["organize", "plan", "schedule", "整理", "计划"],
+          "projects": ["calendar-planning", "file-organization", "goal-setting"]
+        }
+      }
+    }
+  }
+}

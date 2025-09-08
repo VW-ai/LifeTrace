@@ -1,0 +1,299 @@
+{
+  "version": "1.0",
+  "description": "Synonym and normalization mapping for SmartHistory tagging system",
+  "last_updated": "2025-09-07",
+  "synonyms": {
+    "work": [
+      "programming",
+      "coding",
+      "development",
+      "dev",
+      "开发",
+      "编程",
+      "代码",
+      "meeting",
+      "会议",
+      "conference",
+      "call",
+      "discussion",
+      "讨论",
+      "project",
+      "项目",
+      "task",
+      "任务",
+      "client",
+      "客户",
+      "bytediff",
+      "bytedance",
+      "smartHistory",
+      "smarthistory"
+    ],
+    "exercise": [
+      "gym",
+      "workout",
+      "fitness",
+      "健身",
+      "运动",
+      "锻炼",
+      "running",
+      "jogging",
+      "跑步",
+      "慢跑",
+      "yoga",
+      "瑜伽",
+      "stretching",
+      "拉伸",
+      "sports",
+      "体育",
+      "basketball",
+      "football",
+      "tennis"
+    ],
+    "study": [
+      "learning",
+      "学习",
+      "reading",
+      "阅读",
+      "research",
+      "研究",
+      "education",
+      "教育",
+      "course",
+      "课程",
+      "tutorial",
+      "教程",
+      "documentation",
+      "文档",
+      "docs",
+      "manual",
+      "手册"
+    ],
+    "personal": [
+      "rest",
+      "休息",
+      "sleep",
+      "睡觉",
+      "nap",
+      "小憩",
+      "午休",
+      "bathroom",
+      "厕所",
+      "toilet",
+      "洗手间",
+      "relaxation",
+      "放松",
+      "chill",
+      "休闲",
+      "self-care",
+      "自我护理",
+      "meditation",
+      "冥想"
+    ],
+    "meals": [
+      "eat",
+      "eating",
+      "吃",
+      "吃饭",
+      "用餐",
+      "breakfast",
+      "早餐",
+      "早饭",
+      "lunch",
+      "午餐",
+      "午饭",
+      "dinner",
+      "晚餐",
+      "晚饭",
+      "supper",
+      "夜宵",
+      "snack",
+      "零食",
+      "小食",
+      "cooking",
+      "做饭",
+      "烹饪"
+    ],
+    "commute": [
+      "travel",
+      "出行",
+      "通勤",
+      "交通",
+      "driving",
+      "开车",
+      "drive",
+      "车",
+      "train",
+      "火车",
+      "地铁",
+      "subway",
+      "metro",
+      "bus",
+      "公交",
+      "公共汽车",
+      "flight",
+      "飞机",
+      "航班"
+    ],
+    "admin": [
+      "paperwork",
+      "文书工作",
+      "文件",
+      "documents",
+      "forms",
+      "表格",
+      "申请",
+      "application",
+      "bureaucracy",
+      "官僚",
+      "办理",
+      "handle",
+      "process"
+    ],
+    "social": [
+      "friends",
+      "朋友",
+      "friend",
+      "社交",
+      "social",
+      "family",
+      "家人",
+      "家庭",
+      "relatives",
+      "亲戚",
+      "party",
+      "聚会",
+      "gathering",
+      "聚餐",
+      "dinner party",
+      "networking",
+      "人际网络",
+      "contacts",
+      "联系人"
+    ],
+    "health": [
+      "medical",
+      "医疗",
+      "doctor",
+      "医生",
+      "physician",
+      "hospital",
+      "医院",
+      "clinic",
+      "诊所",
+      "medication",
+      "药物",
+      "medicine",
+      "药",
+      "therapy",
+      "治疗",
+      "rehabilitation",
+      "康复"
+    ],
+    "maintenance": [
+      "update",
+      "更新",
+      "upgrade",
+      "升级",
+      "fix",
+      "修复",
+      "repair",
+      "维修",
+      "backup",
+      "备份",
+      "system",
+      "系统",
+      "troubleshooting",
+      "故障排除",
+      "debugging",
+      "调试"
+    ]
+  },
+  "technical_abbreviations": {
+    "CI/CD": [
+      "continuous integration",
+      "continuous deployment",
+      "持续集成",
+      "持续部署"
+    ],
+    "API": [
+      "application programming interface",
+      "应用程序接口",
+      "接口"
+    ],
+    "UI": [
+      "user interface",
+      "用户界面",
+      "界面"
+    ],
+    "UX": [
+      "user experience",
+      "用户体验",
+      "体验"
+    ],
+    "DB": [
+      "database",
+      "数据库"
+    ],
+    "QA": [
+      "quality assurance",
+      "质量保证",
+      "测试"
+    ],
+    "PR": [
+      "pull request",
+      "代码审查",
+      "合并请求"
+    ],
+    "MVP": [
+      "minimum viable product",
+      "最小可行产品"
+    ]
+  },
+  "personal_shortcuts": {
+    "bytediff": [
+      "work",
+      "coding",
+      "development",
+      "项目"
+    ],
+    "smartHistory": [
+      "work",
+      "coding",
+      "personal project",
+      "开发"
+    ],
+    "单测": [
+      "testing",
+      "unit testing",
+      "工作"
+    ],
+    "前端": [
+      "frontend",
+      "web development",
+      "工作"
+    ],
+    "后端": [
+      "backend",
+      "server development",
+      "工作"
+    ],
+    "周会": [
+      "meeting",
+      "weekly meeting",
+      "工作"
+    ],
+    "接口会": [
+      "API meeting",
+      "technical meeting",
+      "工作"
+    ]
+  },
+  "normalization_rules": {
+    "case_insensitive": true,
+    "strip_punctuation": true,
+    "remove_extra_spaces": true,
+    "bilingual_support": true,
+    "fuzzy_matching_threshold": 0.8
+  },
+  "generated_at": "auto-generated from user data"
+}

@@ -31,16 +31,21 @@ const timeRanges: TimeRange[] = [
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   background: radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(255, 204, 0, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(255, 102, 0, 0.05) 0%, transparent 50%);
-  padding: 1rem 2rem 2rem 2rem;
+  padding: 1rem clamp(1rem, 3vw, 2rem) 2rem clamp(1rem, 3vw, 2rem);
   box-sizing: border-box;
   overflow-x: hidden;
   
   @media (max-width: 768px) {
     padding: 0.5rem 1rem 1rem 1rem;
+  }
+  
+  @media (min-width: 1400px) {
+    padding: 1rem clamp(2rem, 5vw, 4rem) 2rem clamp(2rem, 5vw, 4rem);
   }
 `;
 
@@ -48,12 +53,13 @@ const DashboardHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2rem);
+  gap: 1rem;
   
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
+    gap: 1.5rem;
+    align-items: stretch;
   }
 `;
 
@@ -95,29 +101,44 @@ const Subtitle = styled.p`
 const TimeRangeSelector = styled.div`
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  padding: clamp(0.75rem, 2vw, 1rem) clamp(1rem, 2.5vw, 1.5rem);
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 251, 235, 0.9) 100%);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(234, 88, 12, 0.1);
   border-radius: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  
+  @media (max-width: 640px) {
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
 `;
 
 const MetricsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
   margin-bottom: 2rem;
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ChartsGrid = styled.div`
   display: grid;
-  gap: 2rem;
+  gap: clamp(1.5rem, 3vw, 2rem);
   grid-template-columns: 2fr 1fr;
   margin-bottom: 2rem;
   
-  @media (max-width: 1024px) {
+  @media (max-width: 1200px) {
     grid-template-columns: 1fr;
+  }
+  
+  @media (min-width: 1400px) {
+    gap: 2.5rem;
   }
 `;
 

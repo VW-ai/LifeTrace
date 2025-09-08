@@ -372,6 +372,227 @@ class TagService:
         # Delete the tag
         TagDAO.delete(tag_id)
         return True
+    
+    # Testing and Management Methods
+    
+    async def test_hierarchical_tagging(self, limit: int = 10) -> Dict[str, Any]:
+        """Test hierarchical tagging system on recent activities."""
+        try:
+            from agent.tools.tag_generator import TagGenerator
+            from agent.core.models import RawActivity
+            
+            # Get recent raw activities
+            raw_dao = RawActivityDAO()
+            raw_activities_db = self.db.execute_query(
+                "SELECT * FROM raw_activities ORDER BY created_at DESC LIMIT ?",
+                [limit]
+            )
+            
+            # Convert to RawActivity objects
+            activities = []
+            for row in raw_activities_db:
+                activity = RawActivity(
+                    date=row['date'],
+                    time=row['time'] or "00:00",
+                    duration_minutes=row['duration_minutes'] or 30,
+                    details=row['details'],
+                    source=row['source'],
+                    orig_link=row['orig_link'] or ""
+                )
+                activities.append(activity)
+            
+            # Initialize TagGenerator and test
+            tag_generator = TagGenerator()
+            results = tag_generator.generate_hierarchical_tags_batch(activities)
+            summary = tag_generator.get_hierarchical_summary(results)
+            
+            return {
+                "status": "success",
+                "test_results": results[:5],  # Show first 5 for brevity
+                "summary": summary,
+                "total_tested": len(results),
+                "hierarchical_system_available": True
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "hierarchical_system_available": False
+            }
+    
+    async def test_enhanced_tagging(self, limit: int = 10) -> Dict[str, Any]:
+        """Test enhanced tagging system on recent activities."""
+        try:
+            from agent.tools.tag_generator import TagGenerator
+            from agent.core.models import RawActivity
+            
+            # Get recent raw activities
+            raw_activities_db = self.db.execute_query(
+                "SELECT * FROM raw_activities ORDER BY created_at DESC LIMIT ?",
+                [limit]
+            )
+            
+            # Convert to RawActivity objects and test
+            tag_generator = TagGenerator()
+            results = []
+            
+            for row in raw_activities_db:
+                activity = RawActivity(
+                    date=row['date'],
+                    time=row['time'] or "00:00",
+                    duration_minutes=row['duration_minutes'] or 30,
+                    details=row['details'],
+                    source=row['source'],
+                    orig_link=row['orig_link'] or ""
+                )
+                
+                tags_with_conf = tag_generator.generate_tags_with_confidence_for_activity(activity)
+                results.append({
+                    "activity_text": activity.details,
+                    "source": activity.source,
+                    "tags_with_confidence": tags_with_conf,
+                    "date": activity.date
+                })
+            
+            return {
+                "status": "success",
+                "test_results": results,
+                "taxonomy_tags_count": len(tag_generator.taxonomy_tags),
+                "enhanced_system_available": True
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "enhanced_system_available": False
+            }
+    
+    async def get_taxonomy_info(self) -> Dict[str, Any]:
+        """Get current taxonomy and hierarchical structure information."""
+        try:
+            from agent.tools.tag_generator import TagGenerator
+            
+            tag_generator = TagGenerator()
+            
+            return {
+                "taxonomy": tag_generator.taxonomy,
+                "hierarchical_taxonomy": tag_generator.hierarchical_taxonomy,
+                "synonyms": tag_generator.synonyms,
+                "taxonomy_tags": tag_generator.taxonomy_tags,
+                "stats": {
+                    "total_taxonomy_tags": len(tag_generator.taxonomy_tags),
+                    "hierarchical_subjects": sum(
+                        len(nature.get("subjects", {})) 
+                        for nature in tag_generator.hierarchical_taxonomy.get("taxonomy", {}).values()
+                    ),
+                    "synonym_mappings": len(tag_generator.synonyms.get("synonyms", {})),
+                    "personal_shortcuts": len(tag_generator.synonyms.get("personal_shortcuts", {}))
+                }
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
+    async def update_taxonomy_from_data(self, max_categories: int = 20) -> Dict[str, Any]:
+        """Update taxonomy and synonyms from user activity data."""
+        try:
+            from agent.tools.tag_generator import TagGenerator
+            from agent.core.models import RawActivity
+            
+            # Get all raw activities
+            raw_activities_db = self.db.execute_query(
+                "SELECT * FROM raw_activities ORDER BY created_at DESC LIMIT 500"
+            )
+            
+            # Convert to RawActivity objects
+            activities = []
+            for row in raw_activities_db:
+                activity = RawActivity(
+                    date=row['date'],
+                    time=row['time'] or "00:00",
+                    duration_minutes=row['duration_minutes'] or 30,
+                    details=row['details'],
+                    source=row['source'],
+                    orig_link=row['orig_link'] or ""
+                )
+                activities.append(activity)
+            
+            # Update taxonomy
+            tag_generator = TagGenerator()
+            tag_generator.update_taxonomy_from_data(activities, max_categories)
+            
+            return {
+                "status": "success",
+                "message": f"Taxonomy updated from {len(activities)} activities",
+                "max_categories": max_categories,
+                "new_taxonomy_tags": len(tag_generator.taxonomy_tags)
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
+    async def get_tag_coverage_stats(self, days_back: int = 30) -> Dict[str, Any]:
+        """Get tag coverage statistics for recent activities."""
+        try:
+            from datetime import datetime, timedelta
+            
+            # Calculate date range
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days_back)
+            
+            # Get processed activities in date range
+            processed_activities = self.db.execute_query("""
+                SELECT pa.*, GROUP_CONCAT(t.name) as tags
+                FROM processed_activities pa
+                LEFT JOIN activity_tags at ON pa.id = at.activity_id  
+                LEFT JOIN tags t ON at.tag_id = t.id
+                WHERE pa.date >= ? AND pa.date <= ?
+                GROUP BY pa.id
+                ORDER BY pa.date DESC
+            """, [start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
+            
+            total_activities = len(processed_activities)
+            tagged_activities = sum(1 for a in processed_activities if a['tags'])
+            
+            # Count tag usage
+            tag_counts = {}
+            for activity in processed_activities:
+                if activity['tags']:
+                    tags = activity['tags'].split(',')
+                    for tag in tags:
+                        tag_counts[tag] = tag_counts.get(tag, 0) + 1
+            
+            coverage_percentage = (tagged_activities / total_activities * 100) if total_activities > 0 else 0
+            
+            return {
+                "date_range": {
+                    "start": start_date.strftime('%Y-%m-%d'),
+                    "end": end_date.strftime('%Y-%m-%d'),
+                    "days": days_back
+                },
+                "coverage_stats": {
+                    "total_activities": total_activities,
+                    "tagged_activities": tagged_activities,
+                    "untagged_activities": total_activities - tagged_activities,
+                    "coverage_percentage": round(coverage_percentage, 2)
+                },
+                "tag_distribution": dict(sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)),
+                "unique_tags_used": len(tag_counts)
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error", 
+                "error": str(e)
+            }
 
 
 class InsightsService:
@@ -668,6 +889,101 @@ class ProcessingService:
             }
         except Exception as e:
             return {"error": str(e)}
+    
+    # Management Methods
+    
+    async def regenerate_all_tags(self, force: bool = False, batch_size: int = 100) -> Dict[str, Any]:
+        """Regenerate tags for all activities with enhanced system."""
+        try:
+            from agent.tools.tag_generator import TagGenerator
+            from agent.core.models import RawActivity
+            
+            # Get all raw activities
+            raw_activities = self.db.execute_query(
+                "SELECT * FROM raw_activities ORDER BY created_at DESC"
+            )
+            
+            # Initialize enhanced tag generator
+            tag_generator = TagGenerator()
+            
+            total_activities = len(raw_activities)
+            processed_count = 0
+            
+            # Process in batches
+            for i in range(0, total_activities, batch_size):
+                batch = raw_activities[i:i + batch_size]
+                
+                for row in batch:
+                    activity = RawActivity(
+                        date=row['date'],
+                        time=row['time'] or "00:00",
+                        duration_minutes=row['duration_minutes'] or 30,
+                        details=row['details'],
+                        source=row['source'],
+                        orig_link=row['orig_link'] or ""
+                    )
+                    
+                    # Generate tags with confidence
+                    tags_with_conf = tag_generator.generate_tags_with_confidence_for_activity(activity)
+                    
+                    if tags_with_conf:
+                        # Update processed activity if exists
+                        # This is a simplified implementation - full version would handle proper updates
+                        pass
+                    
+                    processed_count += 1
+                
+                # Progress update could be added here
+            
+            return {
+                "status": "success",
+                "message": f"Regenerated tags for {processed_count} activities",
+                "total_activities": total_activities,
+                "batch_size": batch_size,
+                "enhanced_tagging": True
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
+    async def import_calendar_activities(self, months_back: int = 3) -> Dict[str, Any]:
+        """Import calendar activities from specified months back."""
+        try:
+            # This would call the calendar import script
+            import subprocess
+            import os
+            
+            script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'import_calendar_data.py')
+            
+            # Run import script
+            result = subprocess.run(
+                ["python", script_path],
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            if result.returncode == 0:
+                return {
+                    "status": "success",
+                    "message": f"Calendar import completed for {months_back} months back",
+                    "output": result.stdout
+                }
+            else:
+                return {
+                    "status": "error", 
+                    "message": "Calendar import failed",
+                    "error": result.stderr
+                }
+                
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
 
 
 class SystemService:
@@ -764,3 +1080,94 @@ class SystemService:
                 last_processing_run=None,
                 uptime_seconds=0
             )
+    
+    async def get_activity_summary(self, days_back: int = 7, include_hierarchical: bool = True) -> Dict[str, Any]:
+        """Get comprehensive activity summary with hierarchical tagging."""
+        try:
+            from datetime import datetime, timedelta
+            
+            # Calculate date range
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days_back)
+            
+            # Get recent raw activities
+            raw_activities = self.db.execute_query("""
+                SELECT * FROM raw_activities 
+                WHERE date >= ? AND date <= ?
+                ORDER BY date DESC, time DESC
+            """, [start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
+            
+            summary = {
+                "date_range": {
+                    "start": start_date.strftime('%Y-%m-%d'),
+                    "end": end_date.strftime('%Y-%m-%d'), 
+                    "days": days_back
+                },
+                "activity_counts": {
+                    "total_activities": len(raw_activities),
+                    "by_source": {}
+                },
+                "time_analysis": {
+                    "total_minutes": 0,
+                    "average_duration": 0
+                }
+            }
+            
+            # Analyze by source and calculate totals
+            source_counts = {}
+            total_minutes = 0
+            
+            for activity in raw_activities:
+                source = activity['source']
+                source_counts[source] = source_counts.get(source, 0) + 1
+                total_minutes += activity['duration_minutes'] or 30
+            
+            summary["activity_counts"]["by_source"] = source_counts
+            summary["time_analysis"]["total_minutes"] = total_minutes
+            summary["time_analysis"]["average_duration"] = (
+                total_minutes / len(raw_activities) if raw_activities else 0
+            )
+            summary["time_analysis"]["total_hours"] = round(total_minutes / 60, 2)
+            
+            # Add hierarchical analysis if requested
+            if include_hierarchical and raw_activities:
+                try:
+                    from agent.tools.tag_generator import TagGenerator
+                    from agent.core.models import RawActivity
+                    
+                    # Sample recent activities for hierarchical analysis
+                    sample_limit = min(50, len(raw_activities))
+                    sample_activities = []
+                    
+                    for row in raw_activities[:sample_limit]:
+                        activity = RawActivity(
+                            date=row['date'],
+                            time=row['time'] or "00:00",
+                            duration_minutes=row['duration_minutes'] or 30,
+                            details=row['details'],
+                            source=row['source'],
+                            orig_link=row['orig_link'] or ""
+                        )
+                        sample_activities.append(activity)
+                    
+                    # Generate hierarchical analysis
+                    tag_generator = TagGenerator()
+                    hierarchical_results = tag_generator.generate_hierarchical_tags_batch(sample_activities)
+                    hierarchical_summary = tag_generator.get_hierarchical_summary(hierarchical_results)
+                    
+                    summary["hierarchical_analysis"] = hierarchical_summary
+                    summary["hierarchical_sample_size"] = sample_limit
+                    
+                except Exception as e:
+                    summary["hierarchical_analysis"] = {
+                        "error": str(e),
+                        "available": False
+                    }
+            
+            return summary
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }

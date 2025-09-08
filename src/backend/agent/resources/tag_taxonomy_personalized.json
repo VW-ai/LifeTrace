@@ -1,0 +1,379 @@
+{
+  "version": "1.0",
+  "description": "SmartHistory canonical tag taxonomy with hierarchical structure",
+  "last_updated": "2025-09-07",
+  "taxonomy": {
+    "work": {
+      "description": "Professional activities, meetings, projects, coding",
+      "keywords": [
+        "coding",
+        "development",
+        "programming",
+        "meeting",
+        "project",
+        "client",
+        "work",
+        "professional",
+        "bytediff",
+        "bytedance",
+        "CI/CD",
+        "branch",
+        "merge",
+        "debug",
+        "testing",
+        "单测",
+        "接口",
+        "前端",
+        "后端",
+        "开发"
+      ],
+      "sub_tags": [
+        "coding",
+        "meetings",
+        "planning",
+        "debugging",
+        "testing",
+        "client_work"
+      ]
+    },
+    "study": {
+      "description": "Learning activities, research, reading, education",
+      "keywords": [
+        "study",
+        "learn",
+        "reading",
+        "research",
+        "education",
+        "course",
+        "tutorial",
+        "documentation",
+        "学习",
+        "研究",
+        "阅读"
+      ],
+      "sub_tags": [
+        "reading",
+        "research",
+        "courses",
+        "documentation"
+      ]
+    },
+    "exercise": {
+      "description": "Physical activities, gym, sports, fitness",
+      "keywords": [
+        "exercise",
+        "gym",
+        "workout",
+        "sports",
+        "fitness",
+        "running",
+        "walking",
+        "yoga",
+        "健身",
+        "运动",
+        "跑步"
+      ],
+      "sub_tags": [
+        "gym",
+        "cardio",
+        "strength",
+        "yoga",
+        "sports"
+      ]
+    },
+    "social": {
+      "description": "Social interactions, friends, family, networking",
+      "keywords": [
+        "social",
+        "friends",
+        "family",
+        "networking",
+        "party",
+        "dinner",
+        "coffee",
+        "chat",
+        "聚会",
+        "朋友",
+        "家人",
+        "社交"
+      ],
+      "sub_tags": [
+        "friends",
+        "family",
+        "networking",
+        "events"
+      ]
+    },
+    "admin": {
+      "description": "Administrative tasks, paperwork, organization",
+      "keywords": [
+        "admin",
+        "paperwork",
+        "organization",
+        "filing",
+        "bureaucracy",
+        "forms",
+        "申请",
+        "办理",
+        "手续",
+        "文件"
+      ],
+      "sub_tags": [
+        "paperwork",
+        "organization",
+        "filing",
+        "bureaucracy"
+      ]
+    },
+    "errands": {
+      "description": "Daily errands, shopping, appointments, chores",
+      "keywords": [
+        "errands",
+        "shopping",
+        "appointment",
+        "chores",
+        "grocery",
+        "cleaning",
+        "laundry",
+        "购物",
+        "打扫",
+        "洗衣"
+      ],
+      "sub_tags": [
+        "shopping",
+        "appointments",
+        "chores",
+        "maintenance"
+      ]
+    },
+    "health": {
+      "description": "Health-related activities, medical appointments, wellness",
+      "keywords": [
+        "health",
+        "medical",
+        "doctor",
+        "wellness",
+        "therapy",
+        "medication",
+        "医疗",
+        "健康",
+        "医生",
+        "药物"
+      ],
+      "sub_tags": [
+        "medical",
+        "wellness",
+        "therapy",
+        "medication"
+      ]
+    },
+    "planning": {
+      "description": "Planning activities, scheduling, goal setting",
+      "keywords": [
+        "planning",
+        "schedule",
+        "goal",
+        "organize",
+        "strategy",
+        "roadmap",
+        "计划",
+        "安排",
+        "目标",
+        "策略"
+      ],
+      "sub_tags": [
+        "scheduling",
+        "goal_setting",
+        "strategy",
+        "organization"
+      ]
+    },
+    "commute": {
+      "description": "Travel, transportation, commuting",
+      "keywords": [
+        "commute",
+        "travel",
+        "transportation",
+        "driving",
+        "train",
+        "bus",
+        "flight",
+        "通勤",
+        "交通",
+        "出行",
+        "开车"
+      ],
+      "sub_tags": [
+        "driving",
+        "public_transport",
+        "flight",
+        "walking"
+      ]
+    },
+    "hobby": {
+      "description": "Personal hobbies, creative activities, entertainment",
+      "keywords": [
+        "hobby",
+        "creative",
+        "art",
+        "music",
+        "gaming",
+        "photography",
+        "writing",
+        "entertainment",
+        "爱好",
+        "创作",
+        "游戏"
+      ],
+      "sub_tags": [
+        "creative",
+        "gaming",
+        "music",
+        "art",
+        "photography"
+      ]
+    },
+    "personal": {
+      "description": "Personal care, self-care, relaxation, rest",
+      "keywords": [
+        "personal",
+        "self-care",
+        "relaxation",
+        "rest",
+        "sleep",
+        "meditation",
+        "reflection",
+        "休息",
+        "放松",
+        "睡觉",
+        "冥想",
+        "厕所",
+        "午休"
+      ],
+      "sub_tags": [
+        "rest",
+        "self_care",
+        "meditation",
+        "reflection"
+      ]
+    },
+    "meals": {
+      "description": "Eating, cooking, food-related activities",
+      "keywords": [
+        "eat",
+        "eating",
+        "meal",
+        "cooking",
+        "food",
+        "breakfast",
+        "lunch",
+        "dinner",
+        "snack",
+        "吃饭",
+        "做饭",
+        "用餐"
+      ],
+      "sub_tags": [
+        "cooking",
+        "dining",
+        "snacks",
+        "meal_prep"
+      ]
+    },
+    "communication": {
+      "description": "Communication activities, emails, calls, messaging",
+      "keywords": [
+        "email",
+        "call",
+        "message",
+        "communication",
+        "phone",
+        "chat",
+        "discussion",
+        "会议",
+        "电话",
+        "聊天",
+        "沟通"
+      ],
+      "sub_tags": [
+        "email",
+        "calls",
+        "messaging",
+        "meetings"
+      ]
+    },
+    "maintenance": {
+      "description": "System maintenance, updates, technical upkeep",
+      "keywords": [
+        "maintenance",
+        "update",
+        "backup",
+        "system",
+        "technical",
+        "fix",
+        "repair",
+        "维护",
+        "更新",
+        "修复"
+      ],
+      "sub_tags": [
+        "system_updates",
+        "repairs",
+        "backups",
+        "troubleshooting"
+      ]
+    }
+  },
+  "global_keywords": {
+    "work_indicators": [
+      "work",
+      "office",
+      "project",
+      "client",
+      "meeting",
+      "coding",
+      "development",
+      "工作",
+      "办公",
+      "项目",
+      "客户",
+      "会议",
+      "开发"
+    ],
+    "time_indicators": [
+      "morning",
+      "afternoon",
+      "evening",
+      "night",
+      "早上",
+      "下午",
+      "晚上",
+      "凌晨"
+    ],
+    "intensity_indicators": [
+      "urgent",
+      "important",
+      "casual",
+      "quick",
+      "long",
+      "紧急",
+      "重要",
+      "随意",
+      "快速",
+      "长时间"
+    ],
+    "bilingual_patterns": [
+      "过",
+      "了",
+      "中",
+      "的",
+      "和",
+      "与",
+      "及",
+      "或",
+      "但",
+      "然后"
+    ]
+  },
+  "generated_at": "auto-generated from user data"
+}

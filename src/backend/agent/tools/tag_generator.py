@@ -18,6 +18,7 @@ class TagGenerator:
         
         # Load taxonomy and synonyms
         self.taxonomy = self._load_taxonomy()
+        self.hierarchical_taxonomy = self._load_hierarchical_taxonomy()
         self.synonyms = self._load_synonyms()
         self.taxonomy_tags = list(self.taxonomy.get("taxonomy", {}).keys())
         
@@ -41,6 +42,17 @@ class TagGenerator:
                     "study": {"description": "Learning activities"}
                 }
             }
+    
+    def _load_hierarchical_taxonomy(self) -> Dict[str, Any]:
+        """Load hierarchical taxonomy from resources."""
+        resources_dir = os.path.join(os.path.dirname(__file__), '..', 'resources')
+        hierarchy_path = os.path.join(resources_dir, 'hierarchical_taxonomy.json')
+        try:
+            with open(hierarchy_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print("Warning: hierarchical_taxonomy.json not found, using basic hierarchy")
+            return {"taxonomy": {}}
     
     def _load_synonyms(self) -> Dict[str, Any]:
         """Load synonyms from resources."""
@@ -73,7 +85,23 @@ class TagGenerator:
             json.dump(unique_tags, f, ensure_ascii=False, indent=2)
     
     def fuzzy_map_to_taxonomy(self, freeform_tag: str, threshold: float = 0.8) -> Optional[Tuple[str, float]]:
-        """Map a freeform tag to taxonomy using fuzzy matching."""
+        """Map a freeform tag to taxonomy using fuzzy string matching.
+        
+        Uses difflib.get_close_matches to find the closest taxonomy tag for
+        a given freeform tag string. Supports case-insensitive matching.
+        
+        Args:
+            freeform_tag: The tag string to map to taxonomy.
+            threshold: Minimum similarity ratio required (0.0-1.0).
+            
+        Returns:
+            Tuple of (taxonomy_tag, confidence_score) if match found, else None.
+            Confidence score represents similarity ratio.
+            
+        Example:
+            >>> tag_gen.fuzzy_map_to_taxonomy("worke", 0.8)
+            ("work", 0.9)
+        """
         if freeform_tag.lower() in [tag.lower() for tag in self.taxonomy_tags]:
             return freeform_tag.lower(), 1.0
         
@@ -495,3 +523,176 @@ class TagGenerator:
         
         print(f"Generated personalized taxonomy with {len(self.taxonomy_tags)} categories")
         print(f"Updated synonym mappings for improved personal context understanding")
+    
+    # Hierarchical Tagging Methods (Three-Layer System)
+    
+    def generate_hierarchical_tags_for_activity(self, raw_activity: RawActivity) -> Dict[str, Any]:
+        """Generate hierarchical tags with three layers: nature, subject, project."""
+        hierarchical_result = {
+            "nature": None,
+            "subject": None,
+            "project": None,
+            "confidence_scores": {
+                "nature": 0.0,
+                "subject": 0.0,
+                "project": 0.0
+            },
+            "fallback_used": False
+        }
+        
+        activity_text = raw_activity.details.lower()
+        
+        # Layer 1: Nature tags (high-level type) - use existing system
+        nature_tags = self.generate_tags_with_confidence_for_activity(raw_activity)
+        if nature_tags:
+            best_nature = max(nature_tags, key=lambda x: x[1])
+            hierarchical_result["nature"] = best_nature[0]
+            hierarchical_result["confidence_scores"]["nature"] = best_nature[1]
+        
+        # Layer 2: Subject detection
+        if hierarchical_result["nature"]:
+            subject, subject_confidence = self._detect_subject_tag(activity_text, hierarchical_result["nature"])
+            hierarchical_result["subject"] = subject
+            hierarchical_result["confidence_scores"]["subject"] = subject_confidence
+            
+            # Layer 3: Project detection (optional)
+            if subject:
+                project, project_confidence = self._detect_project_tag(activity_text, hierarchical_result["nature"], subject)
+                hierarchical_result["project"] = project
+                hierarchical_result["confidence_scores"]["project"] = project_confidence
+        
+        return hierarchical_result
+    
+    def _detect_subject_tag(self, activity_text: str, nature_tag: str) -> Tuple[Optional[str], float]:
+        """Detect subject-level tag based on nature and activity content."""
+        hierarchy = self.hierarchical_taxonomy.get("taxonomy", {})
+        nature_config = hierarchy.get(nature_tag, {})
+        subjects = nature_config.get("subjects", {})
+        
+        best_subject = None
+        best_confidence = 0.0
+        
+        for subject_name, subject_config in subjects.items():
+            confidence = self._calculate_subject_confidence(activity_text, subject_config)
+            if confidence > best_confidence and confidence > 0.3:  # Minimum threshold
+                best_subject = subject_name
+                best_confidence = confidence
+        
+        return best_subject, best_confidence
+    
+    def _detect_project_tag(self, activity_text: str, nature_tag: str, subject_tag: str) -> Tuple[Optional[str], float]:
+        """Detect project-level tag based on nature, subject and activity content."""
+        hierarchy = self.hierarchical_taxonomy.get("taxonomy", {})
+        subject_config = hierarchy.get(nature_tag, {}).get("subjects", {}).get(subject_tag, {})
+        projects = subject_config.get("projects", [])
+        
+        best_project = None
+        best_confidence = 0.0
+        
+        for project_name in projects:
+            # Simple keyword matching for project detection
+            if project_name.lower().replace("-", " ").replace("_", " ") in activity_text:
+                confidence = min(0.9, len(project_name) / 15.0)  # Length-based confidence
+                if confidence > best_confidence:
+                    best_project = project_name
+                    best_confidence = confidence
+        
+        return best_project, best_confidence
+    
+    def _calculate_subject_confidence(self, activity_text: str, subject_config: Dict[str, Any]) -> float:
+        """Calculate confidence for subject match based on keywords and personal shortcuts."""
+        keywords = subject_config.get("keywords", [])
+        confidence_factors = []
+        
+        # Keyword matching
+        for keyword in keywords:
+            if keyword.lower() in activity_text:
+                # Weight longer keywords more heavily
+                confidence_factors.append(min(0.8, len(keyword) / 20.0))
+        
+        # Personal shortcuts from synonyms
+        personal_shortcuts = self.synonyms.get("personal_shortcuts", {})
+        for shortcut, categories in personal_shortcuts.items():
+            if shortcut.lower() in activity_text:
+                subject_name = subject_config.get("description", "").split()[0].lower()
+                if any(subject_name in cat.lower() for cat in categories):
+                    confidence_factors.append(0.9)  # High confidence for personal shortcuts
+        
+        # Return weighted average of confidence factors
+        return sum(confidence_factors) / len(confidence_factors) if confidence_factors else 0.0
+    
+    def generate_hierarchical_tags_batch(self, raw_activities: List[RawActivity]) -> List[Dict[str, Any]]:
+        """Generate hierarchical tags for a batch of activities."""
+        results = []
+        for activity in raw_activities:
+            hierarchical_tags = self.generate_hierarchical_tags_for_activity(activity)
+            results.append({
+                "activity_id": getattr(activity, 'id', None),
+                "activity_text": activity.details,
+                "hierarchical_tags": hierarchical_tags,
+                "source": activity.source,
+                "date": activity.date
+            })
+        return results
+    
+    def get_hierarchical_summary(self, hierarchical_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate summary statistics for hierarchical tagging results."""
+        summary = {
+            "total_activities": len(hierarchical_results),
+            "nature_distribution": {},
+            "subject_distribution": {},
+            "project_distribution": {},
+            "coverage_stats": {
+                "nature_coverage": 0,
+                "subject_coverage": 0, 
+                "project_coverage": 0
+            },
+            "confidence_stats": {
+                "avg_nature_confidence": 0.0,
+                "avg_subject_confidence": 0.0,
+                "avg_project_confidence": 0.0
+            }
+        }
+        
+        nature_confidences = []
+        subject_confidences = []
+        project_confidences = []
+        
+        for result in hierarchical_results:
+            tags = result["hierarchical_tags"]
+            
+            # Count distributions
+            if tags["nature"]:
+                summary["coverage_stats"]["nature_coverage"] += 1
+                nature_tag = tags["nature"]
+                summary["nature_distribution"][nature_tag] = summary["nature_distribution"].get(nature_tag, 0) + 1
+                nature_confidences.append(tags["confidence_scores"]["nature"])
+                
+            if tags["subject"]:
+                summary["coverage_stats"]["subject_coverage"] += 1
+                subject_tag = tags["subject"]
+                summary["subject_distribution"][subject_tag] = summary["subject_distribution"].get(subject_tag, 0) + 1
+                subject_confidences.append(tags["confidence_scores"]["subject"])
+                
+            if tags["project"]:
+                summary["coverage_stats"]["project_coverage"] += 1
+                project_tag = tags["project"]
+                summary["project_distribution"][project_tag] = summary["project_distribution"].get(project_tag, 0) + 1
+                project_confidences.append(tags["confidence_scores"]["project"])
+        
+        # Calculate averages
+        if nature_confidences:
+            summary["confidence_stats"]["avg_nature_confidence"] = sum(nature_confidences) / len(nature_confidences)
+        if subject_confidences:
+            summary["confidence_stats"]["avg_subject_confidence"] = sum(subject_confidences) / len(subject_confidences)
+        if project_confidences:
+            summary["confidence_stats"]["avg_project_confidence"] = sum(project_confidences) / len(project_confidences)
+        
+        # Convert coverage to percentages
+        total = summary["total_activities"]
+        if total > 0:
+            summary["coverage_stats"]["nature_coverage"] = summary["coverage_stats"]["nature_coverage"] / total * 100
+            summary["coverage_stats"]["subject_coverage"] = summary["coverage_stats"]["subject_coverage"] / total * 100
+            summary["coverage_stats"]["project_coverage"] = summary["coverage_stats"]["project_coverage"] / total * 100
+        
+        return summary

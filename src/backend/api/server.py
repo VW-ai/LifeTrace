@@ -292,6 +292,75 @@ def create_app() -> FastAPI:
         """Get system statistics."""
         return await system_service.get_system_stats()
 
+    # Testing and Management Endpoints
+    @app.post(f"{API_V1_PREFIX}/test/hierarchical-tagging")
+    async def test_hierarchical_tagging(
+        limit: int = Query(default=10, ge=1, le=100),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Test hierarchical tagging system on recent activities."""
+        return await tag_service.test_hierarchical_tagging(limit=limit)
+    
+    @app.post(f"{API_V1_PREFIX}/test/enhanced-tagging")
+    async def test_enhanced_tagging(
+        limit: int = Query(default=10, ge=1, le=100),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Test enhanced tagging system on recent activities."""
+        return await tag_service.test_enhanced_tagging(limit=limit)
+    
+    @app.post(f"{API_V1_PREFIX}/management/regenerate-tags")
+    async def regenerate_all_tags(
+        force: bool = Query(default=False),
+        batch_size: int = Query(default=100, ge=10, le=1000),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Regenerate tags for all activities with enhanced system."""
+        return await processing_service.regenerate_all_tags(force=force, batch_size=batch_size)
+    
+    @app.get(f"{API_V1_PREFIX}/management/taxonomy")
+    async def get_taxonomy_info(
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get current taxonomy and hierarchical structure information."""
+        return await tag_service.get_taxonomy_info()
+    
+    @app.post(f"{API_V1_PREFIX}/management/update-taxonomy")
+    async def update_taxonomy_from_data(
+        max_categories: int = Query(default=20, ge=10, le=50),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Update taxonomy and synonyms from user activity data."""
+        return await tag_service.update_taxonomy_from_data(max_categories=max_categories)
+    
+    @app.get(f"{API_V1_PREFIX}/management/tag-coverage")
+    async def get_tag_coverage_stats(
+        days_back: int = Query(default=30, ge=1, le=365),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag coverage statistics for recent activities."""
+        return await tag_service.get_tag_coverage_stats(days_back=days_back)
+    
+    @app.post(f"{API_V1_PREFIX}/management/import-calendar")
+    async def import_calendar_activities(
+        months_back: int = Query(default=3, ge=1, le=12),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Import calendar activities from specified months back."""
+        return await processing_service.import_calendar_activities(months_back=months_back)
+    
+    @app.get(f"{API_V1_PREFIX}/management/activity-summary")
+    async def get_activity_summary(
+        days_back: int = Query(default=7, ge=1, le=365),
+        include_hierarchical: bool = Query(default=True),
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Get comprehensive activity summary with hierarchical tagging."""
+        return await system_service.get_activity_summary(
+            days_back=days_back, 
+            include_hierarchical=include_hierarchical
+        )
+
     return app
 
 
