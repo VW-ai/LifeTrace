@@ -78,7 +78,7 @@ const TooltipContent = ({ active, payload, label }: any) => {
 export const AreaChart: React.FC<AreaChartProps> = ({
   data,
   categories,
-  height = 320,
+  height = '50vh',
   className
 }) => {
   return (

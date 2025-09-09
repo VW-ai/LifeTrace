@@ -111,7 +111,7 @@ const TooltipContent = ({ active, payload }: any) => {
 
 export const PieChart: React.FC<PieChartProps> = ({
   data,
-  height = 320,
+  height = '50vh',
   showLegend = true,
   className
 }) => {
@@ -142,8 +142,8 @@ export const PieChart: React.FC<PieChartProps> = ({
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={120}
+              innerRadius="50%"
+              outerRadius="80%"
               paddingAngle={4}
               dataKey="value"
             >
