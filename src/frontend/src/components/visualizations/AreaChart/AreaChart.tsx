@@ -27,7 +27,7 @@ interface AreaChartProps {
     name: string;
     color: string;
   }>;
-  height?: number;
+  height?: number | string; // allow responsive heights like '40vh'
   className?: string;
 }
 

@@ -21,7 +21,7 @@ interface PieChartData {
 
 interface PieChartProps {
   data: PieChartData[];
-  height?: number;
+  height?: number | string; // allow responsive heights like '40vh'
   showLegend?: boolean;
   className?: string;
 }

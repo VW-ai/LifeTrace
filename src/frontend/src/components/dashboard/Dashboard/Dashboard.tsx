@@ -366,7 +366,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ className }) => {
           <ChartTitle>Activity Trends Over Time</ChartTitle>
           <ChartSubtitle>Flowing visualization of your time patterns</ChartSubtitle>
           {areaData.length > 0 ? (
-            <AreaChart data={areaData} categories={categories} height={320} />
+            <AreaChart data={areaData} categories={categories} height={"40vh"} />
           ) : (
             <div style={{ padding: '2rem', textAlign: 'center', color: professionalTheme.colors.textSecondary }}>
               No activity data available for the selected period
@@ -378,7 +378,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ className }) => {
           <ChartTitle>Activity Composition</ChartTitle>
           <ChartSubtitle>Your time distribution at a glance</ChartSubtitle>
           {pieData.length > 0 ? (
-            <PieChart data={pieData} height={320} />
+            <PieChart data={pieData} height={"40vh"} />
           ) : (
             <div style={{ padding: '2rem', textAlign: 'center', color: professionalTheme.colors.textSecondary }}>
               No activity data available
