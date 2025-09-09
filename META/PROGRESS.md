@@ -2,6 +2,29 @@
 This tracker serves as a log of what we have accomplished. sections are separated by time(date granularity)
 
 ---
+### 2025-09-09 (Phase 1 complete; Phase 2 started)
+- Branch workflow: set up per-branch worktrees for clean isolation
+  - main → /Users/waynewang/smartHistory-main
+  - feat/tagging_upgrade (legacy) → /Users/waynewang/smartHistory-tagging-upgrade
+  - feat/tagging_upgrade_clean (refactor) → /Users/waynewang/smartHistory
+- Backend refactor (Phase 1):
+  - Fixed DB insert pattern: added same-cursor `execute_insert` and updated all DAOs to avoid lastrowid race
+  - Fixed Pydantic mutable defaults via `default_factory` in API response models
+  - Added scripts/evaluate_tagging.py to track coverage, avg tags/activity, top tags, confidence buckets
+  - Baseline metrics on current DB: coverage 100%, avg tags/activity ≈ 1.05, multi-tag ratio ≈ 0.046, “work” dominant
+- Frontend fixes:
+  - Responsive chart heights (vh) and equal-width chart layout (50%/50%)
+  - Prevented body vertical-centering to avoid clipping top area; container now uses full width
+- Tagging improvements (Phase 2 kick-off):
+  - Implemented calibrated TagGenerator scoring: thresholds, top-N selection, synonyms/taxonomy weighting, source bias, duration scaling
+  - Added `src/backend/agent/resources/tagging_calibration.json` + META for iterative tuning
+- Alignment with Tagging_Enhance_Proposal.md (functional direction):
+  - Plan next: Calendar-as-Query + Notion-as-Context pipeline
+    - Separate storage paths for calendar vs notion; preserve Notion parent/child tree; daily edited-tree tracking
+    - Generate 30–100 word abstracts for leaf blocks; store and embed for IR
+    - Retrieval: time-window → candidate blocks; then embedding R@K; then LLM reasoning to finalize context
+    - Feed abstracts/context into tagging and insights
+
 ### 2025-09-01 (MILESTONE 1: MVP SYSTEM ARCHITECTURE ESTABLISHED ✅)
 - **🔧 CRITICAL BUG FIXES & DATA INTEGRITY:**
   - **Database Path Mismatch:** Fixed backend using empty database while populated data existed in project root
