@@ -5,6 +5,41 @@ And every time we resume to development, we should read TODO first to know where
 We follow an append-only strategy in the writing of thie file.
 
 ---
+### Next Steps (as of 2025-09-09)
+
+- [HIGH] Calendar-as-Query, Notion-as-Context (storage + IR pipeline)
+  - Design and implement Notion blocks storage with parent/child links, last_edited_at, and daily “edited-tree” snapshots (tree merge of edited chains). Co-locate META.
+  - Generate 30–100 word abstracts for leaf blocks; store abstract; compute/store embeddings (JSON for now; vector extension later). Co-locate META.
+  - Retrieval helper: from a calendar event, select time-window candidates → embed query → cosine similarity to candidate leaf embeddings → top-K selection; optional LLM reasoning pass to validate matches.
+  - Integrate selected abstracts into TagGenerator scoring (Phase 2) to improve tag diversity and confidence.
+
+- [HIGH] One-click backfill (last 6 months of calendar events)
+  - CLI + API to backfill last 6 months from Google Calendar; progress logging.
+  - Re-run tagging pipeline on backfilled data to measure improvements over time; persist evaluation metrics (coverage, avg tags/activity, multi-tag ratio, confidence histogram).
+
+- [HIGH] Google Calendar integration upgrade (multi-calendar)
+  - Add support for an additional Google Calendar API / multiple calendars; make calendar sources configurable.
+  - Normalize multi-calendar ingestion into raw_activities with clear source identifiers.
+
+- [HIGH] Use all Notion pages (not just diary)
+  - Expand Notion ingestion to index all pages/blocks (not limited to diary); respect page types while building edited-tree; configurable scopes.
+
+- [HIGH] Agentic tagging calibration
+  - Auto-generate synonyms and taxonomy with AI using our Notion + Calendar corpus; periodic regeneration endpoint that updates `agent/resources` (with META + audit trail).
+  - Feed regenerated synonyms/taxonomy into TagGenerator calibration; keep manual overrides possible.
+
+- [MEDIUM] API and UI enhancements
+  - API: return context abstracts with processed activities; add endpoints to view tagging metrics history and IR candidates per activity.
+  - UI: show abstracts in tooltips/hover for top activities; add backfill trigger and status in dashboard.
+  - Background tasks for long-running operations (imports, backfills, IR indexing) with job status endpoints.
+
+- [MEDIUM] Consistency & cleanup
+  - Replace brittle SQL clause building with DAO queries for activities and tags; keep services thin.
+  - Remove sys.path hacks; use package-relative imports and runner-based PYTHONPATH.
+
+- [LOW] Hardening (post-dev)
+  - Production CORS/TrustedHost tightening; rate limiting via shared store; auth enablement.
+
 ### Next Steps (as of 2025-08-28)
 
 -   **[High Priority] Implement `notion_parser.py`:**
