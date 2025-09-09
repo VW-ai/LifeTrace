@@ -31,7 +31,7 @@ const timeRanges: TimeRange[] = [
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   background: radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(255, 204, 0, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(255, 102, 0, 0.05) 0%, transparent 50%);
