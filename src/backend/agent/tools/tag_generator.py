@@ -1,6 +1,6 @@
 import os
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from openai import OpenAI
 from ..core.models import TagGenerationContext, RawActivity
 from ..prompts.tag_prompts import TagPrompts
@@ -17,6 +17,35 @@ class TagGenerator:
         # Tag management
         self.existing_tags = []
         self.tag_event_ratio_threshold = 0.3  # Configurable threshold
+
+        # Calibration (Phase 2): thresholds, weights, synonyms/taxonomy, biases
+        self.calibration: Dict[str, Any] = {}
+        try:
+            # Default resource path inside repo
+            base_dir = os.path.join(os.path.dirname(__file__), '..', 'resources')
+            calib_path = os.path.abspath(os.path.join(base_dir, 'tagging_calibration.json'))
+            self.load_calibration(calib_path)
+        except Exception as e:
+            print(f"Warning: failed to load tagging calibration: {e}")
+            self.calibration = {
+                "threshold": 0.5,
+                "max_tags": 3,
+                "weights": {
+                    "synonym_match": 1.0,
+                    "taxonomy_match": 1.2,
+                    "title_bonus": 0.3,
+                    "duration_scale": 0.001
+                },
+                "downweight": {"work": 0.5},
+                "synonyms": {},
+                "taxonomy": {},
+                "source_bias": {}
+            }
+
+    def load_calibration(self, path: str) -> None:
+        """Load tagging calibration JSON from resources."""
+        with open(path, 'r', encoding='utf-8') as f:
+            self.calibration = json.load(f)
     
     def load_existing_tags(self, tags_file: str = 'existing_tags.json') -> None:
         """Load existing tags from storage."""
@@ -115,7 +144,7 @@ class TagGenerator:
         return generated_tags[:3]  # Limit to 3 tags
     
     def generate_tags_for_activity(self, activity: RawActivity) -> List[str]:
-        """Generate tags for a single activity."""
+        """Generate tags for a single activity with calibrated scoring and thresholds."""
         # Create context for tag generation
         context = TagGenerationContext(
             existing_tags=self.existing_tags,
@@ -124,22 +153,92 @@ class TagGenerator:
             duration_minutes=activity.duration_minutes,
             time_context=activity.time
         )
-        
-        # First, try to find matching existing tags
-        matching_tags = self.find_matching_existing_tags(activity.details)
-        if matching_tags:
-            print(f"Found matching existing tags: {matching_tags}")
-            return matching_tags[:3]  # Use up to 3 matching tags
-        
-        # If no matches, generate new tags
-        new_tags = self.generate_tags_with_llm(context)
-        
-        # Add new tags to existing tags list
-        for tag in new_tags:
+        # Build candidate scores from: existing tag matches, synonyms, taxonomy, and (optionally) LLM
+        scores = self._score_candidates(activity)
+        if not scores:
+            # Fall back to previous mechanisms if scoring produced nothing
+            matching_tags = self.find_matching_existing_tags(activity.details)
+            if matching_tags:
+                return matching_tags[: self.calibration.get('max_tags', 3)]
+            new_tags = self.generate_tags_with_llm(context)
+            for tag in new_tags:
+                if tag not in self.existing_tags:
+                    self.existing_tags.append(tag)
+            return new_tags
+
+        # Normalize and select above threshold
+        selected = self._select_top_tags(scores)
+        # Track any new tags
+        for tag in selected:
             if tag not in self.existing_tags:
                 self.existing_tags.append(tag)
-        
-        return new_tags
+        return selected
+
+    def _select_top_tags(self, scores: Dict[str, float]) -> List[str]:
+        """Normalize scores to [0,1], apply threshold and return top N tags."""
+        if not scores:
+            return []
+        max_score = max(scores.values()) or 1.0
+        threshold = float(self.calibration.get('threshold', 0.5))
+        max_tags = int(self.calibration.get('max_tags', 3))
+        # Normalize
+        norm = {t: (s / max_score) for t, s in scores.items()}
+        # Apply threshold and sort
+        filtered = [(t, v) for t, v in norm.items() if v >= threshold]
+        if not filtered:
+            # Ensure at least one tag
+            t, _ = max(norm.items(), key=lambda x: x[1])
+            return [t]
+        filtered.sort(key=lambda x: x[1], reverse=True)
+        return [t for t, _ in filtered[:max_tags]]
+
+    def _score_candidates(self, activity: RawActivity) -> Dict[str, float]:
+        """Produce candidate tag scores using synonyms, taxonomy, and biases."""
+        text = (activity.details or '').lower()
+        words = set(text.split())
+        dur = float(activity.duration_minutes or 0)
+        source = activity.source or ''
+
+        cal = self.calibration
+        syn = cal.get('synonyms', {})
+        tax = cal.get('taxonomy', {})
+        weights = cal.get('weights', {})
+        down = cal.get('downweight', {})
+        bias = cal.get('source_bias', {}).get(source, {})
+
+        scores: Dict[str, float] = {}
+
+        # Synonym matches
+        for tag, keys in syn.items():
+            for k in keys:
+                if k.lower() in text:
+                    scores[tag] = scores.get(tag, 0.0) + float(weights.get('synonym_match', 1.0))
+
+        # Taxonomy matches: if a subtag matched above, give parent tag some credit
+        for parent, children in tax.items():
+            for child in children:
+                if child in scores:
+                    scores[parent] = scores.get(parent, 0.0) + float(weights.get('taxonomy_match', 1.2))
+
+        # Duration scaling (longer tasks likely more significant)
+        scores = {t: s + dur * float(weights.get('duration_scale', 0.0)) for t, s in scores.items()}
+
+        # Source bias adjustments
+        for t in list(scores.keys()):
+            scores[t] = scores[t] + float(bias.get(t, 0.0))
+
+        # Title bonus (approximate: early words perceived as title keywords)
+        first_tokens = set((activity.details or '').lower().split()[:6])
+        for tag, keys in syn.items():
+            if any(k in first_tokens for k in keys):
+                scores[tag] = scores.get(tag, 0.0) + float(weights.get('title_bonus', 0.0))
+
+        # Downweight generic tags (e.g., 'work')
+        for t, factor in down.items():
+            if t in scores:
+                scores[t] *= float(factor)
+
+        return scores
     
     def should_regenerate_system_tags(self, total_events: int) -> bool:
         """Check if system-wide tag regeneration is needed."""
