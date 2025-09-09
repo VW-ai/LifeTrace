@@ -71,6 +71,11 @@ class DatabaseManager:
         """Execute an INSERT, UPDATE, or DELETE query."""
         return self.transactions.execute_update(query, params)
     
+    def execute_insert(self, query: str,
+                       params: Optional[Union[Tuple, Dict]] = None) -> int:
+        """Execute an INSERT and return last inserted row id."""
+        return self.transactions.execute_insert(query, params)
+    
     def execute_batch(self, query: str, 
                      params_list: List[Union[Tuple, Dict]]) -> int:
         """Execute a batch of queries with different parameters."""

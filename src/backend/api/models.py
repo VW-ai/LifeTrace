@@ -34,7 +34,7 @@ class RawActivityResponse(BaseModel):
     details: str
     source: str
     orig_link: Optional[str] = None
-    raw_data: Dict[str, Any] = {}
+    raw_data: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -48,8 +48,8 @@ class ProcessedActivityResponse(BaseModel):
     total_duration_minutes: int
     combined_details: str
     sources: List[str]
-    tags: List[TagResponse] = []
-    raw_activity_ids: List[int] = []
+    tags: List[TagResponse] = Field(default_factory=list)
+    raw_activity_ids: List[int] = Field(default_factory=list)
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

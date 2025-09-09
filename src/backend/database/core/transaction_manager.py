@@ -126,6 +126,39 @@ class TransactionManager:
             logger.error(f"Unexpected error during update: {e}")
             raise DatabaseOperationError(f"Update failed: {e}")
     
+    def execute_insert(self, query: str,
+                       params: Optional[Union[Tuple, Dict]] = None) -> int:
+        """
+        Execute an INSERT query and return the last inserted row ID using the same cursor.
+        
+        Args:
+            query: SQL INSERT query
+            params: Query parameters (tuple or dict)
+        
+        Returns:
+            Last inserted row ID
+        
+        Raises:
+            DatabaseOperationError: If insert execution fails
+        """
+        try:
+            with self.pool.get_connection() as conn:
+                cursor = conn.cursor()
+                if params:
+                    cursor.execute(query, params)
+                else:
+                    cursor.execute(query)
+                lastrowid = cursor.lastrowid
+                conn.commit()
+                logger.debug(f"Insert executed successfully, lastrowid {lastrowid}")
+                return lastrowid
+        except sqlite3.Error as e:
+            logger.error(f"Insert execution failed: {e}")
+            raise DatabaseOperationError(f"Insert failed: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during insert: {e}")
+            raise DatabaseOperationError(f"Insert failed: {e}")
+    
     def execute_batch(self, query: str, 
                      params_list: List[Union[Tuple, Dict]]) -> int:
         """

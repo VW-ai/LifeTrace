@@ -33,3 +33,7 @@ To ensure that the project remains understandable and that the purpose of comple
 ### 2.6 Comments and Code Style
 - Adapt Google Style in specific code writing
 - Comment should be good so that another developer would be able to pickup the development the project.
+
+### 2.7 Iteration Awareness
+- We code in iterations. Therefore, it is extremely important to be aware of clean up necessary old-version code if the older versions are no longer in use.
+- Avoid redundency at your best.
