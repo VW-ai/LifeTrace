@@ -76,6 +76,18 @@ from .access.models import (
     UserSessionDAO
 )
 
+# Notion storage exports
+from .access.notion_blocks_dao import (
+    NotionPageDB,
+    NotionBlockDB,
+    NotionBlockEditDB,
+    NotionEmbeddingDB,
+    NotionPageDAO,
+    NotionBlockDAO,
+    NotionBlockEditDAO,
+    NotionEmbeddingDAO,
+)
+
 __all__ = [
     # Atomic components
     'DatabaseManager',
@@ -108,6 +120,16 @@ __all__ = [
     'TagDAO',
     'ActivityTagDAO',
     'UserSessionDAO'
+    ,
+    # Notion
+    'NotionPageDB',
+    'NotionBlockDB',
+    'NotionBlockEditDB',
+    'NotionEmbeddingDB',
+    'NotionPageDAO',
+    'NotionBlockDAO',
+    'NotionBlockEditDAO',
+    'NotionEmbeddingDAO'
 ]
 
 # Package version
