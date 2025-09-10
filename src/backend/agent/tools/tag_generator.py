@@ -193,8 +193,41 @@ class TagGenerator:
         return [t for t, _ in filtered[:max_tags]]
 
     def _score_candidates(self, activity: RawActivity) -> Dict[str, float]:
-        """Produce candidate tag scores using synonyms, taxonomy, and biases."""
-        text = (activity.details or '').lower()
+        """Produce candidate tag scores using synonyms, taxonomy, and biases.
+        Incorporates retrieved Notion abstracts around the activity date when available.
+        """
+        base_text = (activity.details or '')
+        enriched_context = ''
+        # Attempt date-based retrieval for calendar events
+        try:
+            if getattr(activity, 'date', None):
+                # Build a query from details and any title-like fields in raw_data
+                title = ''
+                try:
+                    title = (activity.raw_data.get('summary')
+                             or activity.raw_data.get('title')
+                             or '')
+                except Exception:
+                    title = ''
+                query_text = (title or base_text) or ''
+                if query_text:
+                    from .context_retriever import ContextRetriever
+                    retriever = ContextRetriever()
+                    ctx = retriever.retrieve_by_date(query_text, date=str(activity.date), days_window=1, k=3)
+                    enriched_parts = []
+                    for r in ctx:
+                        blk = r.block
+                        if getattr(blk, 'abstract', None):
+                            enriched_parts.append(blk.abstract)
+                        elif getattr(blk, 'text', None):
+                            enriched_parts.append(blk.text)
+                    if enriched_parts:
+                        enriched_context = ' '.join(enriched_parts)
+        except Exception:
+            # Fail open; continue with base text
+            pass
+
+        text = f"{base_text}\n{enriched_context}".strip().lower()
         words = set(text.split())
         dur = float(activity.duration_minutes or 0)
         source = activity.source or ''

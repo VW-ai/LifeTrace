@@ -321,6 +321,17 @@ def create_app() -> FastAPI:
         """Retrieve top-K Notion contexts for a query within recent hours."""
         return await system_service.get_notion_context(query=query, hours=hours, k=k)
 
+    @app.get(f"{API_V1_PREFIX}/retrieval/notion-context-by-date")
+    async def retrieval_notion_context_by_date(
+        query: str = Query(..., min_length=2),
+        date: str = Query(..., pattern=r'^\\d{4}-\\d{2}-\\d{2}$'),
+        windowDays: int = Query(default=1, ge=0, le=7),
+        k: int = Query(default=5, ge=1, le=50),
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Retrieve top-K Notion contexts around the specified date."""
+        return await system_service.get_notion_context_by_date(query=query, date=date, window_days=windowDays, k=k)
+
     return app
 
 

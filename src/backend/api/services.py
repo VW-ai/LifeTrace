@@ -833,6 +833,27 @@ class SystemService:
                 last_processing_run=datetime.fromisoformat(last_processing) if last_processing else None,
                 uptime_seconds=uptime_seconds
             )
+
+    async def get_notion_context_by_date(self, query: str, date: str, window_days: int = 1, k: int = 5) -> Dict[str, Any]:
+        """Retrieve top-K Notion contexts around a specific date.
+        date format: YYYY-MM-DD; window_days selects [date - window_days, date + window_days].
+        """
+        retriever = ContextRetriever()
+        results = retriever.retrieve_by_date(query, date=date, days_window=window_days, k=k)
+        items = []
+        for r in results:
+            blk = r.block
+            items.append({
+                "block_id": blk.block_id,
+                "page_id": blk.page_id,
+                "parent_block_id": blk.parent_block_id,
+                "is_leaf": blk.is_leaf,
+                "text": blk.text,
+                "abstract": blk.abstract,
+                "last_edited_at": blk.last_edited_at,
+                "score": round(r.score, 4)
+            })
+        return {"query": query, "date": date, "window_days": window_days, "results": items}
             
         except Exception as e:
             # Return error stats
