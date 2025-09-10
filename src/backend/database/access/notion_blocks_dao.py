@@ -184,6 +184,29 @@ class NotionBlockDAO:
         return [NotionBlockDAO._row_to_model(r) for r in rows]
 
     @staticmethod
+    def get_all_leaf_blocks() -> List[NotionBlockDB]:
+        """Return all leaf blocks (for full indexing)."""
+        db = get_db_manager()
+        rows = db.execute_query(
+            "SELECT * FROM notion_blocks WHERE is_leaf = 1 ORDER BY last_edited_at DESC"
+        )
+        return [NotionBlockDAO._row_to_model(r) for r in rows]
+
+    @staticmethod
+    def get_by_edited_range(start_iso: str, end_iso: str) -> List[NotionBlockDB]:
+        """Return blocks edited between start_iso and end_iso (inclusive)."""
+        db = get_db_manager()
+        rows = db.execute_query(
+            """
+            SELECT * FROM notion_blocks
+            WHERE last_edited_at >= ? AND last_edited_at <= ?
+            ORDER BY last_edited_at DESC
+            """,
+            (start_iso, end_iso),
+        )
+        return [NotionBlockDAO._row_to_model(r) for r in rows]
+
+    @staticmethod
     def _row_to_model(r) -> NotionBlockDB:
         return NotionBlockDB(
             id=r["id"],
@@ -264,4 +287,3 @@ class NotionEmbeddingDAO:
             dim=r["dim"],
             created_at=r["created_at"],
         )
-

@@ -280,11 +280,20 @@ def create_app() -> FastAPI:
     # Backfill endpoint
     @app.post(f"{API_V1_PREFIX}/management/backfill-calendar")
     async def backfill_calendar(
-        months: int = Query(default=6, ge=1, le=24),
+        months: int = Query(default=7, ge=1, le=24),
         processing_service: ProcessingService = Depends(get_processing_service)
     ):
         """Backfill last N months of calendar events."""
         return await processing_service.backfill_calendar(months=months)
+
+    @app.post(f"{API_V1_PREFIX}/management/index-notion")
+    async def index_notion(
+        scope: str = Query(default='all', pattern=r'^(all|recent)$'),
+        hours: int = Query(default=24, ge=1, le=2160),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Generate abstracts + embeddings for Notion blocks (all or recent)."""
+        return await processing_service.index_notion_blocks(scope=scope, hours=hours)
 
     # System Endpoints
     @app.get(f"{API_V1_PREFIX}/system/health", response_model=SystemHealthResponse)

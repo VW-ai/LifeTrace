@@ -628,7 +628,7 @@ class ProcessingService:
                 "source": "google_calendar"
             }
 
-    async def backfill_calendar(self, months: int = 6) -> Dict[str, Any]:
+    async def backfill_calendar(self, months: int = 7) -> Dict[str, Any]:
         """One-click backfill for the last N months of calendar events."""
         try:
             hours = int(months * 30 * 24)
@@ -640,6 +640,51 @@ class ProcessingService:
                 "backfilled_months": months,
                 "imported_count": count
             }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    async def index_notion_blocks(self, scope: str = "all", hours: int = 24) -> Dict[str, Any]:
+        """Generate abstracts and embeddings for Notion blocks.
+        scope: 'all' or 'recent' (by edited time window)
+        """
+        from src.backend.database import NotionBlockDAO, NotionEmbeddingDAO, NotionEmbeddingDB
+        from src.backend.notion.abstracts import generate_abstract, embed_text
+
+        try:
+            if scope == "recent":
+                blocks = NotionBlockDAO.get_recently_edited(hours=hours)
+            else:
+                blocks = NotionBlockDAO.get_all_leaf_blocks()
+
+            processed = 0
+            for blk in blocks:
+                # Ensure abstract
+                abstract = blk.abstract or generate_abstract(blk.text or "")
+                if abstract != blk.abstract:
+                    # update abstract field via upsert
+                    from src.backend.database import NotionBlockDB
+                    updated = NotionBlockDB(
+                        block_id=blk.block_id,
+                        page_id=blk.page_id,
+                        parent_block_id=blk.parent_block_id,
+                        is_leaf=blk.is_leaf,
+                        text=blk.text,
+                        abstract=abstract,
+                        last_edited_at=blk.last_edited_at,
+                    )
+                    from src.backend.database import NotionBlockDAO as NBD
+                    NBD.upsert(updated)
+
+                # Ensure embedding
+                emb = NotionEmbeddingDAO.get_by_block(blk.block_id)
+                if not emb or not (emb.vector):
+                    vec = embed_text(abstract or (blk.text or ""))
+                    emb_db = NotionEmbeddingDB(block_id=blk.block_id, vector=vec)
+                    NotionEmbeddingDAO.upsert(emb_db)
+
+                processed += 1
+
+            return {"status": "success", "processed_blocks": processed, "scope": scope}
         except Exception as e:
             return {"status": "error", "message": str(e)}
     

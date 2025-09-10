@@ -16,7 +16,7 @@ class TagPrompts:
 
 IMPORTANT RULES:
 1. ALWAYS try to reuse existing tags when appropriate
-2. Generate 1-3 tags maximum per activity  
+2. Generate 1-10 tags maximum per activity  
 3. Tags should be concise (1-4 words)
 4. Use consistent naming (e.g., "web_development" not "Web Development")
 5. Focus on the nature of the activity, not specific details

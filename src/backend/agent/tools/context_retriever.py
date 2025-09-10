@@ -53,3 +53,22 @@ class ContextRetriever:
         results.sort(key=lambda r: r.score, reverse=True)
         return results[:k]
 
+    def retrieve_by_date(self, query_text: str, date: str, days_window: int = 1, k: int = 5) -> List[RetrievedContext]:
+        """Return top-K leaf blocks edited around a specific date.
+        date: 'YYYY-MM-DD'; window selects [date - days_window, date + days_window].
+        """
+        from datetime import datetime, timedelta
+        q_vec = embed_text(query_text)
+        d = datetime.strptime(date, "%Y-%m-%d")
+        start = (d - timedelta(days=days_window)).strftime("%Y-%m-%d 00:00:00")
+        end = (d + timedelta(days=days_window)).strftime("%Y-%m-%d 23:59:59")
+        candidates = NotionBlockDAO.get_by_edited_range(start, end)
+        results: List[RetrievedContext] = []
+        for blk in candidates:
+            emb = NotionEmbeddingDAO.get_by_block(blk.block_id)
+            if not emb or not emb.vector:
+                continue
+            score = _cosine(q_vec, emb.vector)
+            results.append(RetrievedContext(block=blk, score=score))
+        results.sort(key=lambda r: r.score, reverse=True)
+        return results[:k]

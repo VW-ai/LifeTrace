@@ -29,7 +29,7 @@ class TagGenerator:
             print(f"Warning: failed to load tagging calibration: {e}")
             self.calibration = {
                 "threshold": 0.5,
-                "max_tags": 3,
+                "max_tags": 10,
                 "weights": {
                     "synonym_match": 1.0,
                     "taxonomy_match": 1.2,
