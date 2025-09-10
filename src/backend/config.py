@@ -38,6 +38,10 @@ class APIConfig:
         self.SECRET_KEY = os.getenv("SECRET_KEY")
         self.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
         
+        # Notion configuration
+        # HISTORY_PAGE_ID: optional page ID for historical backfill anchoring
+        self.NOTION_HISTORY_PAGE_ID = os.getenv("HISTORY_PAGE_ID")
+        
         # Rate Limiting
         self.RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
         self.RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))

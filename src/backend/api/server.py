@@ -277,6 +277,15 @@ def create_app() -> FastAPI:
         """Get status of data imports."""
         return await processing_service.get_import_status()
 
+    # Backfill endpoint
+    @app.post(f"{API_V1_PREFIX}/management/backfill-calendar")
+    async def backfill_calendar(
+        months: int = Query(default=6, ge=1, le=24),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Backfill last N months of calendar events."""
+        return await processing_service.backfill_calendar(months=months)
+
     # System Endpoints
     @app.get(f"{API_V1_PREFIX}/system/health", response_model=SystemHealthResponse)
     async def get_system_health(
@@ -291,6 +300,17 @@ def create_app() -> FastAPI:
     ):
         """Get system statistics."""
         return await system_service.get_system_stats()
+
+    # Retrieval endpoints
+    @app.get(f"{API_V1_PREFIX}/retrieval/notion-context")
+    async def retrieval_notion_context(
+        query: str = Query(..., min_length=2),
+        hours: int = Query(default=24, ge=1, le=2160),
+        k: int = Query(default=5, ge=1, le=50),
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Retrieve top-K Notion contexts for a query within recent hours."""
+        return await system_service.get_notion_context(query=query, hours=hours, k=k)
 
     return app
 

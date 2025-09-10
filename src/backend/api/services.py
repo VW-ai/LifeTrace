@@ -23,6 +23,7 @@ from src.backend.database import (
 )
 from src.backend.agent.core.activity_processor import ActivityProcessor
 from .models import *
+from src.backend.agent.tools.context_retriever import ContextRetriever
 
 
 class ActivityService:
@@ -626,6 +627,21 @@ class ProcessingService:
                 "message": str(e),
                 "source": "google_calendar"
             }
+
+    async def backfill_calendar(self, months: int = 6) -> Dict[str, Any]:
+        """One-click backfill for the last N months of calendar events."""
+        try:
+            hours = int(months * 30 * 24)
+            from src.backend.parsers.google_calendar.parser import parse_to_database
+            count = parse_to_database('google_calendar_events.json', 
+                                      hours_since_last_update=hours)
+            return {
+                "status": "success",
+                "backfilled_months": months,
+                "imported_count": count
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
     
     async def import_notion_data(self, request: ImportRequest) -> Dict[str, Any]:
         """Import data from Notion parser."""
@@ -695,6 +711,26 @@ class SystemService:
                 total_activities=total_activities,
                 last_updated=datetime.fromisoformat(last_updated) if isinstance(last_updated, str) else last_updated
             )
+
+    # Retrieval / Context endpoints
+    async def get_notion_context(self, query: str, hours: int = 24, k: int = 5) -> Dict[str, Any]:
+        """Retrieve top-K Notion contexts for a query within recent hours."""
+        retriever = ContextRetriever()
+        results = retriever.retrieve(query, hours=hours, k=k)
+        items = []
+        for r in results:
+            blk = r.block
+            items.append({
+                "block_id": blk.block_id,
+                "page_id": blk.page_id,
+                "parent_block_id": blk.parent_block_id,
+                "is_leaf": blk.is_leaf,
+                "text": blk.text,
+                "abstract": blk.abstract,
+                "last_edited_at": blk.last_edited_at,
+                "score": round(r.score, 4)
+            })
+        return {"query": query, "results": items}
             
             services_health = ServiceHealth(
                 tag_generator="operational",
