@@ -643,6 +643,37 @@ class ProcessingService:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    async def reprocess_date_range(self, date_start: str, date_end: str,
+                                   regenerate_system_tags: bool = False) -> Dict[str, Any]:
+        """Purge processed results for a date range and reprocess that range.
+        Note: current processor runs DB-wide but filters to the date range.
+        """
+        try:
+            # Purge processed activities in range (cascade deletes activity_tags)
+            deleted = self.db.execute_update(
+                "DELETE FROM processed_activities WHERE date >= ? AND date <= ?",
+                (date_start, date_end)
+            )
+            # Run processing for specified date range
+            processor = ActivityProcessor()
+            processor.enable_system_tag_regeneration = regenerate_system_tags
+            report = processor.process_daily_activities(
+                use_database=True,
+                date_start=date_start,
+                date_end=date_end
+            )
+
+            return {
+                "status": "success",
+                "deleted_processed": deleted,
+                "date_start": date_start,
+                "date_end": date_end,
+                "processed_counts": report.get('processed_counts', {}),
+                "tag_analysis": report.get('tag_analysis', {})
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     async def index_notion_blocks(self, scope: str = "all", hours: int = 24) -> Dict[str, Any]:
         """Generate abstracts and embeddings for Notion blocks.
         scope: 'all' or 'recent' (by edited time window)

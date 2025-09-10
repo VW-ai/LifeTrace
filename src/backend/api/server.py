@@ -295,6 +295,18 @@ def create_app() -> FastAPI:
         """Generate abstracts + embeddings for Notion blocks (all or recent)."""
         return await processing_service.index_notion_blocks(scope=scope, hours=hours)
 
+    @app.post(f"{API_V1_PREFIX}/management/reprocess-range")
+    async def reprocess_range(
+        date_start: str = Query(..., pattern=r'^\\d{4}-\\d{2}-\\d{2}$'),
+        date_end: str = Query(..., pattern=r'^\\d{4}-\\d{2}-\\d{2}$'),
+        regenerate_system_tags: bool = Query(default=False),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Purge processed activities in date range and reprocess that window."""
+        return await processing_service.reprocess_date_range(
+            date_start=date_start, date_end=date_end, regenerate_system_tags=regenerate_system_tags
+        )
+
     # System Endpoints
     @app.get(f"{API_V1_PREFIX}/system/health", response_model=SystemHealthResponse)
     async def get_system_health(

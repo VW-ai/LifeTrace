@@ -23,7 +23,9 @@ class ActivityProcessor:
                                calendar_file: str = None,
                                output_raw_file: str = None,
                                output_processed_file: str = None,
-                               use_database: bool = True) -> Dict[str, Any]:
+                               use_database: bool = True,
+                               date_start: str = None,
+                               date_end: str = None) -> Dict[str, Any]:
         """Main entry point for daily activity processing (now database-first)."""
         
         print("=== Starting Daily Activity Processing ===")
@@ -35,7 +37,9 @@ class ActivityProcessor:
         print("\n1. Loading raw data...")
         if use_database:
             print("Loading from database (preferred method)...")
-            raw_activities = self.data_consumer.load_raw_activities_from_database()
+            raw_activities = self.data_consumer.load_raw_activities_from_database(
+                date_start=date_start, date_end=date_end
+            )
         else:
             print("Loading from JSON files (legacy method)...")
             # Update data consumer file paths if provided
@@ -49,6 +53,12 @@ class ActivityProcessor:
             print("No activities found to process")
             return {'status': 'no_data', 'processed_count': 0}
         
+        # If date filter requested on file path, filter here as well
+        if not use_database and (date_start or date_end):
+            raw_activities = self.data_consumer.filter_activities_by_date_range(
+                raw_activities, start_date=date_start, end_date=date_end
+            )
+
         # Step 4: Match and merge activities from different sources
         print("\n2. Matching activities across sources...")
         matched_activities = self.activity_matcher.match_activities(raw_activities)
