@@ -121,14 +121,46 @@ def main():
         print("[0/5] Ensuring database schema (migrations)...")
         mm = MigrationManager()
         mm.migrate_up()
-        # Layer 1: backfill raw
-        months = months_between(start_date, end_date)
-        print(f"\n[1/5] Backfilling calendar for ~{months} months...")
-        print(await processing.backfill_calendar(months=months))
 
-        hours = hours_since(start_date)
-        print(f"\n[2/5] Importing Notion edits for last {hours} hours...")
-        print(await processing.import_notion_data(ImportRequest(hours_since_last_update=hours)))
+        # Extra safety: ensure required Notion columns exist (idempotent)
+        try:
+            from src.backend.database import get_db_manager
+            db = get_db_manager()
+            with db.get_connection() as conn:
+                cur = conn.cursor()
+                def has_col(table, col):
+                    cur.execute(f"PRAGMA table_info({table})")
+                    return col in [row[1] for row in cur.fetchall()]
+                # notion_pages
+                if not has_col('notion_pages', 'last_edited_at'):
+                    cur.execute("ALTER TABLE notion_pages ADD COLUMN last_edited_at DATETIME")
+                # notion_blocks
+                if not has_col('notion_blocks', 'is_leaf'):
+                    cur.execute("ALTER TABLE notion_blocks ADD COLUMN is_leaf INTEGER DEFAULT 0")
+                if not has_col('notion_blocks', 'abstract'):
+                    cur.execute("ALTER TABLE notion_blocks ADD COLUMN abstract TEXT")
+                if not has_col('notion_blocks', 'last_edited_at'):
+                    cur.execute("ALTER TABLE notion_blocks ADD COLUMN last_edited_at DATETIME")
+                conn.commit()
+        except Exception as e:
+            print(f"[WARN] Failed to ensure Notion columns (may already exist): {e}")
+        # Layer 1: backfill raw via APIs (DB-only)
+        print(f"\n[1/5] Ingesting Google Calendar events {start_date}..{end_date} → DB...")
+        try:
+            from src.backend.parsers.google_calendar.ingest_api import ingest_to_database as gcal_ingest
+            gcal_count = gcal_ingest(start_date, end_date)
+            print({"status": "success", "google_calendar_ingested": gcal_count})
+        except Exception as e:
+            print({"status": "error", "source": "google_calendar", "message": str(e)})
+
+        print(f"\n[2/5] Ingesting Notion pages/blocks → DB (workspace-wide)...")
+        try:
+            from src.backend.parsers.notion.ingest_api import NotionIngestor
+            n_ingestor = NotionIngestor()
+            n_count = n_ingestor.ingest_all()
+            print({"status": "success", "notion_blocks_ingested": n_count})
+        except Exception as e:
+            print({"status": "error", "source": "notion", "message": str(e)})
 
         print("\n[3/5] Indexing Notion abstracts + embeddings (all leaf blocks)...")
         print(await processing.index_notion_blocks(scope="all"))

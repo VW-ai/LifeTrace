@@ -39,3 +39,10 @@ mypy>=1.5.0
 
 # Optional: API Documentation Enhancement
 markdown>=3.5.0
+
+# Ingestion clients
+notion-client>=2.5.0
+google-api-python-client>=2.133.0
+google-auth>=2.32.0
+google-auth-oauthlib>=1.2.0
+python-dotenv>=1.0.1
