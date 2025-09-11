@@ -29,6 +29,7 @@ if str(PROJECT_ROOT) not in sys.path:
 try:
     from google.oauth2.credentials import Credentials  # type: ignore
     from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
+    from google.auth.transport.requests import Request  # type: ignore
     from googleapiclient.discovery import build  # type: ignore
     from googleapiclient.errors import HttpError  # type: ignore
 except Exception:
@@ -66,15 +67,25 @@ def _ensure_creds() -> Optional[Credentials]:  # type: ignore
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
-                creds.refresh(Request())  # type: ignore
-            except Exception:
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"[WARN] Token refresh failed: {e}")
                 creds = None
         if not creds:
             if not cred_path.exists():
                 print(f"[ERROR] credentials.json not found at {cred_path}")
+                print("Create an OAuth Client ID of type 'Desktop app' in Google Cloud Console, download JSON as credentials.json.")
                 return None
-            flow = InstalledAppFlow.from_client_secrets_file(str(cred_path), SCOPES)
-            creds = flow.run_local_server(port=0)
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(str(cred_path), SCOPES)
+                creds = flow.run_local_server(port=0)
+            except Exception as e:
+                print("[ERROR] OAuth login failed. If you see redirect_uri_mismatch:")
+                print(" - Ensure your OAuth client is of type 'Desktop app' (not 'Web application').")
+                print(" - Recreate credentials in Google Cloud Console → OAuth client ID → Desktop app.")
+                print(" - Delete token.json and retry.")
+                print(f"Details: {e}")
+                return None
         # Save the credentials for the next run
         with open(token_path, "w") as token:
             token.write(creds.to_json())
@@ -163,4 +174,3 @@ def ingest_to_database(start_date: str, end_date: str, calendar_ids: Optional[Li
 
 
 __all__ = ["ingest_to_database"]
-

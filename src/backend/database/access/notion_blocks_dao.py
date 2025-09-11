@@ -39,6 +39,7 @@ class NotionBlockDB:
     block_id: str = ""
     page_id: str = ""
     parent_block_id: Optional[str] = None
+    block_type: Optional[str] = None
     is_leaf: bool = False
     text: str = ""
     abstract: Optional[str] = None
@@ -134,12 +135,13 @@ class NotionBlockDAO:
         affected = db.execute_update(
             """
             UPDATE notion_blocks
-            SET page_id=?, parent_block_id=?, is_leaf=?, text=?, abstract=?, last_edited_at=?
+            SET page_id=?, parent_block_id=?, block_type=?, is_leaf=?, text=?, abstract=?, last_edited_at=?
             WHERE block_id=?
             """,
             (
                 block.page_id,
                 block.parent_block_id,
+                block.block_type or "",
                 1 if block.is_leaf else 0,
                 block.text,
                 block.abstract,
@@ -150,13 +152,14 @@ class NotionBlockDAO:
         if affected == 0:
             return db.execute_insert(
                 """
-                INSERT INTO notion_blocks (block_id, page_id, parent_block_id, is_leaf, text, abstract, last_edited_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO notion_blocks (block_id, page_id, parent_block_id, block_type, is_leaf, text, abstract, last_edited_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     block.block_id,
                     block.page_id,
                     block.parent_block_id,
+                    block.block_type or "",
                     1 if block.is_leaf else 0,
                     block.text,
                     block.abstract,
@@ -208,16 +211,18 @@ class NotionBlockDAO:
 
     @staticmethod
     def _row_to_model(r) -> NotionBlockDB:
+        keys = r.keys()
         return NotionBlockDB(
             id=r["id"],
             block_id=r["block_id"],
             page_id=r["page_id"],
-            parent_block_id=r["parent_block_id"],
-            is_leaf=bool(r["is_leaf"]),
-            text=r["text"],
-            abstract=r["abstract"],
-            created_at=r["created_at"],
-            last_edited_at=r["last_edited_at"],
+            parent_block_id=r["parent_block_id"] if "parent_block_id" in keys else None,
+            block_type=r["block_type"] if "block_type" in keys else None,
+            is_leaf=bool(r["is_leaf"]) if "is_leaf" in keys else False,
+            text=r["text"] if "text" in keys else "",
+            abstract=r["abstract"] if "abstract" in keys else None,
+            created_at=r["created_at"] if "created_at" in keys else None,
+            last_edited_at=r["last_edited_at"] if "last_edited_at" in keys else None,
         )
 
 

@@ -139,6 +139,7 @@ class NotionIngestor:
                 block_id=bid,
                 page_id=page_id,
                 parent_block_id=parent_block_id,
+                block_type=btype,
                 is_leaf=is_leaf,
                 text=text,
                 abstract=None,

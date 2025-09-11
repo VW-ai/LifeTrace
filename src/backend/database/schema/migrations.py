@@ -117,6 +117,7 @@ class MigrationManager:
 
             ensure_column('notion_pages', 'last_edited_at', 'DATETIME')
             ensure_column('notion_blocks', 'last_edited_at', 'DATETIME')
+            ensure_column('notion_blocks', 'text', 'TEXT')
             ensure_column('notion_blocks', 'abstract', 'TEXT')
             ensure_column('notion_blocks', 'is_leaf', 'INTEGER DEFAULT 0')
 

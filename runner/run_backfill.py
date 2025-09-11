@@ -141,6 +141,10 @@ def main():
                     cur.execute("ALTER TABLE notion_blocks ADD COLUMN abstract TEXT")
                 if not has_col('notion_blocks', 'last_edited_at'):
                     cur.execute("ALTER TABLE notion_blocks ADD COLUMN last_edited_at DATETIME")
+                if not has_col('notion_blocks', 'text'):
+                    cur.execute("ALTER TABLE notion_blocks ADD COLUMN text TEXT")
+                if not has_col('notion_blocks', 'block_type'):
+                    cur.execute("ALTER TABLE notion_blocks ADD COLUMN block_type TEXT DEFAULT ''")
                 conn.commit()
         except Exception as e:
             print(f"[WARN] Failed to ensure Notion columns (may already exist): {e}")
