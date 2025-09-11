@@ -16,6 +16,7 @@ Notes:
 """
 
 import argparse
+import os
 from datetime import datetime
 from pathlib import Path
 import sys
@@ -24,7 +25,14 @@ import sys
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import asyncio
 from src.backend.api.dependencies import get_processing_service
+from src.backend.api.models import ImportRequest
+from src.backend.database.schema.migrations import MigrationManager
+try:
+    from dotenv import load_dotenv  # type: ignore
+except Exception:
+    load_dotenv = None  # type: ignore
 
 
 def hours_since(date_str: str) -> int:
@@ -94,26 +102,42 @@ def main():
     print("=== SmartHistory Backfill Runner ===")
     print(f"Date range: {start_date} -> {end_date}")
 
+    # Load environment variables from .env if available (OPENAI_API_KEY, etc.)
+    if load_dotenv is not None:
+        env_path = PROJECT_ROOT / '.env'
+        if env_path.exists():
+            load_dotenv(env_path)
+            print(f"Loaded environment from {env_path}")
+    else:
+        print("python-dotenv not installed; ensure environment variables are exported")
+
+    if not os.getenv('OPENAI_API_KEY'):
+        print("[WARN] OPENAI_API_KEY not set; LLM-based tagging/embeddings will fall back to heuristics.")
+
     processing = get_processing_service()
 
-    # Layer 1: backfill raw
-    # Calendar backfill (approximate months between start and end)
-    months = months_between(start_date, end_date)
-    print(f"\n[1/5] Backfilling calendar for ~{months} months...")
-    print(processing.backfill_calendar(months=months).result())  # type: ignore
+    async def run_sequence():
+        # [0/5] Ensure schema is up-to-date (adds Notion columns if missing)
+        print("[0/5] Ensuring database schema (migrations)...")
+        mm = MigrationManager()
+        mm.migrate_up()
+        # Layer 1: backfill raw
+        months = months_between(start_date, end_date)
+        print(f"\n[1/5] Backfilling calendar for ~{months} months...")
+        print(await processing.backfill_calendar(months=months))
 
-    # Notion import for the range (hours since start)
-    hours = hours_since(start_date)
-    print(f"\n[2/5] Importing Notion edits for last {hours} hours...")
-    print(processing.import_notion_data(type("Req", (), {"hours_since_last_update": hours})()).result())  # type: ignore
+        hours = hours_since(start_date)
+        print(f"\n[2/5] Importing Notion edits for last {hours} hours...")
+        print(await processing.import_notion_data(ImportRequest(hours_since_last_update=hours)))
 
-    # Index Notion (all)
-    print("\n[3/5] Indexing Notion abstracts + embeddings (all leaf blocks)...")
-    print(processing.index_notion_blocks(scope="all").result())  # type: ignore
+        print("\n[3/5] Indexing Notion abstracts + embeddings (all leaf blocks)...")
+        print(await processing.index_notion_blocks(scope="all"))
 
-    # Layer 2: purge + reprocess date range
-    print(f"\n[4/5] Purge + reprocess processed activities in range {start_date}..{end_date}...")
-    print(processing.reprocess_date_range(date_start=start_date, date_end=end_date).result())  # type: ignore
+        # Layer 2: purge + reprocess date range
+        print(f"\n[4/5] Purge + reprocess processed activities in range {start_date}..{end_date}...")
+        print(await processing.reprocess_date_range(date_start=start_date, date_end=end_date))
+
+    asyncio.run(run_sequence())
 
     # Metrics
     print("\n[5/5] Tagging metrics after backfill:")
@@ -124,4 +148,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

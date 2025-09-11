@@ -62,9 +62,70 @@ class MigrationManager:
     
     def _load_builtin_migrations(self):
         """Load built-in migration definitions."""
-        # Migration 1: Initial schema (already in schema.sql)
-        # This is handled by the connection initialization
-        pass
+        # Migration 2: Ensure Notion tables and columns exist
+        def ensure_notion_schema(conn: sqlite3.Connection):
+            cur = conn.cursor()
+            # Create tables if missing
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS notion_pages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                page_id TEXT NOT NULL UNIQUE,
+                title TEXT DEFAULT '',
+                url TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_edited_at DATETIME
+            )
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS notion_blocks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                block_id TEXT NOT NULL UNIQUE,
+                page_id TEXT NOT NULL,
+                parent_block_id TEXT,
+                is_leaf INTEGER DEFAULT 0,
+                text TEXT DEFAULT '',
+                abstract TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_edited_at DATETIME
+            )
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS notion_block_edits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                block_id TEXT NOT NULL,
+                edited_at DATETIME NOT NULL
+            )
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS notion_embeddings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                block_id TEXT NOT NULL,
+                model TEXT DEFAULT '',
+                vector TEXT NOT NULL,
+                dim INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(block_id, model)
+            )
+            """)
+
+            # Ensure columns exist (SQLite lacks IF NOT EXISTS for columns)
+            def ensure_column(table: str, column: str, ddl: str):
+                cur.execute(f"PRAGMA table_info({table})")
+                cols = [row[1] for row in cur.fetchall()]
+                if column not in cols:
+                    cur.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+            ensure_column('notion_pages', 'last_edited_at', 'DATETIME')
+            ensure_column('notion_blocks', 'last_edited_at', 'DATETIME')
+            ensure_column('notion_blocks', 'abstract', 'TEXT')
+            ensure_column('notion_blocks', 'is_leaf', 'INTEGER DEFAULT 0')
+
+        self.add_migration(Migration(
+            version=2,
+            description="Ensure Notion tables and last_edited_at columns",
+            up_sql='',
+            custom_up=ensure_notion_schema
+        ))
     
     def _load_migration_files(self):
         """Load migration files from the migrations directory."""

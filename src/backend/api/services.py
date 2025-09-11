@@ -788,37 +788,17 @@ class SystemService:
                 last_updated=datetime.fromisoformat(last_updated) if isinstance(last_updated, str) else last_updated
             )
 
-    # Retrieval / Context endpoints
-    async def get_notion_context(self, query: str, hours: int = 24, k: int = 5) -> Dict[str, Any]:
-        """Retrieve top-K Notion contexts for a query within recent hours."""
-        retriever = ContextRetriever()
-        results = retriever.retrieve(query, hours=hours, k=k)
-        items = []
-        for r in results:
-            blk = r.block
-            items.append({
-                "block_id": blk.block_id,
-                "page_id": blk.page_id,
-                "parent_block_id": blk.parent_block_id,
-                "is_leaf": blk.is_leaf,
-                "text": blk.text,
-                "abstract": blk.abstract,
-                "last_edited_at": blk.last_edited_at,
-                "score": round(r.score, 4)
-            })
-        return {"query": query, "results": items}
-            
             services_health = ServiceHealth(
                 tag_generator="operational",
                 activity_matcher="operational"
             )
-            
+
             return SystemHealthResponse(
                 status="healthy",
                 database=database_health,
                 services=services_health
             )
-            
+
         except Exception as e:
             return SystemHealthResponse(
                 status="down",
@@ -864,6 +844,37 @@ class SystemService:
                 last_processing_run=datetime.fromisoformat(last_processing) if last_processing else None,
                 uptime_seconds=uptime_seconds
             )
+        except Exception as e:
+            # Return error stats
+            return SystemStatsResponse(
+                total_raw_activities=0,
+                total_processed_activities=0,
+                total_tags=0,
+                total_sessions=0,
+                database_size_mb=0.0,
+                last_processing_run=None,
+                uptime_seconds=0
+            )
+
+    # Retrieval / Context endpoints (class-level methods)
+    async def get_notion_context(self, query: str, hours: int = 24, k: int = 5) -> Dict[str, Any]:
+        """Retrieve top-K Notion contexts for a query within recent hours."""
+        retriever = ContextRetriever()
+        results = retriever.retrieve(query, hours=hours, k=k)
+        items = []
+        for r in results:
+            blk = r.block
+            items.append({
+                "block_id": blk.block_id,
+                "page_id": blk.page_id,
+                "parent_block_id": blk.parent_block_id,
+                "is_leaf": blk.is_leaf,
+                "text": blk.text,
+                "abstract": blk.abstract,
+                "last_edited_at": blk.last_edited_at,
+                "score": round(r.score, 4)
+            })
+        return {"query": query, "results": items}
 
     async def get_notion_context_by_date(self, query: str, date: str, window_days: int = 1, k: int = 5) -> Dict[str, Any]:
         """Retrieve top-K Notion contexts around a specific date.
@@ -885,15 +896,3 @@ class SystemService:
                 "score": round(r.score, 4)
             })
         return {"query": query, "date": date, "window_days": window_days, "results": items}
-            
-        except Exception as e:
-            # Return error stats
-            return SystemStatsResponse(
-                total_raw_activities=0,
-                total_processed_activities=0,
-                total_tags=0,
-                total_sessions=0,
-                database_size_mb=0.0,
-                last_processing_run=None,
-                uptime_seconds=0
-            )

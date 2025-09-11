@@ -1,18 +1,21 @@
 import os
 import json
 from typing import List, Dict, Any, Optional, Tuple
-from openai import OpenAI
+try:
+    from openai import OpenAI  # type: ignore
+except Exception:
+    OpenAI = None  # type: ignore
 from ..core.models import TagGenerationContext, RawActivity
 from ..prompts.tag_prompts import TagPrompts
 
 class TagGenerator:
     """Handles intelligent tag generation using LLM integration."""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo"):
+    def __init__(self, api_key: Optional[str] = None, model: str = None):
         """Initialize with OpenAI API configuration."""
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        self.model = model
-        self.client = OpenAI(api_key=self.api_key) if self.api_key else None
+        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+        self.client = OpenAI(api_key=self.api_key) if (self.api_key and OpenAI) else None
         
         # Tag management
         self.existing_tags = []
