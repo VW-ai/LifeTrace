@@ -65,6 +65,40 @@ Unified deployment script supporting multiple environments:
 ### `./runner/run_api.py`
 Standalone API server runner with database setup.
 
+### `./runner/run_ingest.py`
+DB-only ingestion and indexing (no tagging). Useful for debugging backfill.
+- Ensures schema (migrations + column repair)
+- Ingests Google Calendar events via API (OAuth Desktop credentials)
+- Ingests Notion workspace pages/blocks via API (NOTION_API_KEY)
+- Indexes Notion abstracts + embeddings for leaf blocks
+
+Examples:
+```
+python runner/run_ingest.py --start 2025-02-01 --end 2025-09-10 --cal-ids primary
+```
+
+### `./runner/run_process_range.py`
+Processing + tagging only for a date range (no ingestion).
+- Purges processed_activities in range and re-tags with enriched context (up to 10 tags)
+- Uses date-based Notion retrieval to enrich each calendar event with relevant abstracts
+
+Examples:
+```
+python runner/run_process_range.py --start 2025-02-01 --end 2025-09-10
+python runner/run_process_range.py --start 2025-02-01 --end 2025-09-10 --regenerate-system-tags
+```
+
+### `./runner/run_build_taxonomy.py`
+Generate data-driven taxonomy and synonyms from your Calendar + Notion context using AI.
+- Produces `src/backend/agent/resources/hierarchical_taxonomy_generated.json`
+  and `src/backend/agent/resources/synonyms_generated.json`
+- TagGenerator auto-loads these files if present.
+
+Example:
+```
+python runner/run_build_taxonomy.py --start 2025-02-01 --end 2025-09-10
+```
+
 ### `./runner/run_parsers.py`
 Data parsing utilities for Notion and Google Calendar.
 
@@ -115,6 +149,24 @@ Core configuration files remain in the root:
 - **Database**: SQLite (dev) / PostgreSQL (prod)
 - **Deployment**: Docker + Kubernetes ready
 - **Monitoring**: Prometheus + Grafana integration
+
+### Calendar-as-Query → Notion-as-Context (Tagging Flow)
+- Ingest Notion workspace into DB: `notion_pages`, `notion_blocks` (tree, text, is_leaf), `notion_block_edits`
+- Index leaf blocks: generate 30–100 word abstracts + embeddings for retrieval
+- At tagging time, retrieve top‑K Notion abstracts around each event date (±window) by embedding similarity
+- TagGenerator enriches event text with abstracts and selects up to 10 tags using calibrated scoring (synonyms/taxonomy/weights)
+- Persist `processed_activities` and `activity_tags` with confidence; triggers update tag usage
+
+See also:
+- `META/TAGGING_PIPELINE.md` – detailed, end‑to‑end flow and debugging tips
+
+### Tagging Logs (Observability)
+- `runner/run_process_range.py` writes a JSONL log per run to `logs/`.
+- Each line records: calendar summary/details, retrieved Notion abstracts (with scores), normalized tag scores, and selected tags.
+- Example:
+```
+tail -f logs/tagging_run_2025-02-01_to_2025-09-10_*.jsonl
+```
 
 ## 📊 Features
 

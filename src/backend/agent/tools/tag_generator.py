@@ -7,6 +7,7 @@ except Exception:
     OpenAI = None  # type: ignore
 from ..core.models import TagGenerationContext, RawActivity
 from ..prompts.tag_prompts import TagPrompts
+from .tagging_logger import get_logger
 
 class TagGenerator:
     """Handles intelligent tag generation using LLM integration."""
@@ -49,6 +50,21 @@ class TagGenerator:
         """Load tagging calibration JSON from resources."""
         with open(path, 'r', encoding='utf-8') as f:
             self.calibration = json.load(f)
+        # Merge in AI-generated resources if present
+        try:
+            base_dir = os.path.join(os.path.dirname(__file__), '..', 'resources')
+            gen_syn = os.path.abspath(os.path.join(base_dir, 'synonyms_generated.json'))
+            gen_tax = os.path.abspath(os.path.join(base_dir, 'hierarchical_taxonomy_generated.json'))
+            if os.path.exists(gen_syn):
+                with open(gen_syn, 'r', encoding='utf-8') as f2:
+                    syn = json.load(f2)
+                    self.calibration['synonyms'] = syn
+            if os.path.exists(gen_tax):
+                with open(gen_tax, 'r', encoding='utf-8') as f3:
+                    tax = json.load(f3)
+                    self.calibration['taxonomy'] = tax
+        except Exception as e:
+            print(f"[WARN] Failed to load generated taxonomy/synonyms: {e}")
     
     def load_existing_tags(self, tags_file: str = 'existing_tags.json') -> None:
         """Load existing tags from storage."""
@@ -93,7 +109,7 @@ class TagGenerator:
             print("Warning: No OpenAI API key provided, using fallback tag generation")
             return self._generate_fallback_tags(context)
         
-        system_prompt = TagPrompts.get_individual_tag_system_prompt()
+        system_prompt = TagPrompts.get_individual_tag_system_prompt(self.calibration)
         user_prompt = TagPrompts.get_individual_tag_user_prompt(context)
 
         try:
@@ -162,11 +178,14 @@ class TagGenerator:
             # Fall back to previous mechanisms if scoring produced nothing
             matching_tags = self.find_matching_existing_tags(activity.details)
             if matching_tags:
-                return matching_tags[: self.calibration.get('max_tags', 3)]
+                selected = matching_tags[: self.calibration.get('max_tags', 10)]
+                self._log_tagging_event(activity, [], {}, selected)
+                return selected
             new_tags = self.generate_tags_with_llm(context)
             for tag in new_tags:
                 if tag not in self.existing_tags:
                     self.existing_tags.append(tag)
+            self._log_tagging_event(activity, [], {}, new_tags)
             return new_tags
 
         # Normalize and select above threshold
@@ -175,6 +194,8 @@ class TagGenerator:
         for tag in selected:
             if tag not in self.existing_tags:
                 self.existing_tags.append(tag)
+        # Log selection with normalized scores and retrieval context if available
+        self._log_tagging_event(activity, getattr(self, '_last_retrieval_ctx', []), self._normalize_scores(scores), selected)
         return selected
 
     def _select_top_tags(self, scores: Dict[str, float]) -> List[str]:
@@ -183,7 +204,7 @@ class TagGenerator:
             return []
         max_score = max(scores.values()) or 1.0
         threshold = float(self.calibration.get('threshold', 0.5))
-        max_tags = int(self.calibration.get('max_tags', 3))
+        max_tags = int(self.calibration.get('max_tags', 10))
         # Normalize
         norm = {t: (s / max_score) for t, s in scores.items()}
         # Apply threshold and sort
@@ -192,8 +213,26 @@ class TagGenerator:
             # Ensure at least one tag
             t, _ = max(norm.items(), key=lambda x: x[1])
             return [t]
+        # Prefer specific children over generic parents
+        taxonomy = self.calibration.get('taxonomy') or {}
         filtered.sort(key=lambda x: x[1], reverse=True)
-        return [t for t, _ in filtered[:max_tags]]
+        selected: List[str] = []
+        for t, v in filtered:
+            # If t is a parent and any of its children are already selected, skip parent
+            is_parent = t in taxonomy
+            has_parent = any(t in (taxonomy.get(p) or []) for p in taxonomy.keys())
+            if is_parent and any(ch in selected for ch in (taxonomy.get(t) or [])):
+                continue
+            # If t has a parent already selected, prefer keeping the child only
+            if has_parent:
+                parents = [p for p, ch in taxonomy.items() if t in (ch or [])]
+                if any(p in selected for p in parents):
+                    # Remove parent and keep child
+                    selected = [x for x in selected if x not in parents]
+            selected.append(t)
+            if len(selected) >= max_tags:
+                break
+        return selected
 
     def _score_candidates(self, activity: RawActivity) -> Dict[str, float]:
         """Produce candidate tag scores using synonyms, taxonomy, and biases.
@@ -201,6 +240,8 @@ class TagGenerator:
         """
         base_text = (activity.details or '')
         enriched_context = ''
+        # Prepare retrieval context cache for logging
+        self._last_retrieval_ctx = []
         # Attempt date-based retrieval for calendar events
         try:
             if getattr(activity, 'date', None):
@@ -224,6 +265,18 @@ class TagGenerator:
                             enriched_parts.append(blk.abstract)
                         elif getattr(blk, 'text', None):
                             enriched_parts.append(blk.text)
+                        # Cache for logging
+                        try:
+                            self._last_retrieval_ctx.append({
+                                'block_id': getattr(blk, 'block_id', None),
+                                'page_id': getattr(blk, 'page_id', None),
+                                'score': round(getattr(r, 'score', 0.0), 4),
+                                'abstract': getattr(blk, 'abstract', None),
+                                'text': getattr(blk, 'text', None),
+                                'last_edited_at': getattr(blk, 'last_edited_at', None),
+                            })
+                        except Exception:
+                            pass
                     if enriched_parts:
                         enriched_context = ' '.join(enriched_parts)
         except Exception:
@@ -275,6 +328,37 @@ class TagGenerator:
                 scores[t] *= float(factor)
 
         return scores
+
+    def _normalize_scores(self, scores: Dict[str, float]) -> Dict[str, float]:
+        if not scores:
+            return {}
+        max_score = max(scores.values()) or 1.0
+        return {k: (v / max_score) for k, v in scores.items()}
+
+    def _log_tagging_event(self, activity, retrievals, norm_scores, selected):
+        logger = get_logger()
+        if not logger:
+            return
+        try:
+            summary = ''
+            try:
+                summary = activity.raw_data.get('summary') or activity.raw_data.get('title') or ''
+            except Exception:
+                summary = ''
+            record = {
+                'type': 'tagging_event',
+                'date': getattr(activity, 'date', None),
+                'time': getattr(activity, 'time', None),
+                'source': getattr(activity, 'source', None),
+                'summary': summary,
+                'details': getattr(activity, 'details', None),
+                'retrievals': retrievals,
+                'selected_tags': selected,
+                'norm_scores': norm_scores,
+            }
+            logger.log(record)
+        except Exception:
+            pass
     
     def should_regenerate_system_tags(self, total_events: int) -> bool:
         """Check if system-wide tag regeneration is needed."""
@@ -295,7 +379,7 @@ class TagGenerator:
             print("Warning: No OpenAI API key, using fallback for system regeneration")
             return self._fallback_system_regeneration(all_activities)
         
-        system_prompt = TagPrompts.get_system_regeneration_system_prompt()
+        system_prompt = TagPrompts.get_system_regeneration_system_prompt(self.calibration)
         user_prompt = TagPrompts.get_system_regeneration_user_prompt(activity_texts)
         
         try:

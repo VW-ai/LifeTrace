@@ -5,6 +5,64 @@ And every time we resume to development, we should read TODO first to know where
 We follow an append-only strategy in the writing of thie file.
 
 ---
+### Next Steps (as of 2025-09-18)
+
+- [HIGH] Tagging prompts and selection (flexible, multi-dimensional)
+  - [COMPLETED] Overhaul prompts to allow 1–10 tags; prefer taxonomy for primary tag; allow new dimension tags (type/topic/tool/context/outcome); keep comma-separated outputs.
+  - [NEXT] Optional JSON-output prompt (tags + confidence + 1-line reason) behind a flag; parse and persist confidences when enabled.
+  - [NEXT] Calibrate to reduce generic “work” and promote specific children; tune `threshold`, `max_tags` (10), and `downweight` in `tagging_calibration.json`.
+
+- [HIGH] Taxonomy + synonyms (control without hard constraints)
+  - Principle: taxonomy guides, does not constrain; allow freeform tags, then soft-map to canonical when confident.
+  - [NEXT] Resources: add versioned `src/backend/agent/resources/tag_taxonomy.json` and `synonyms.json`; continue supporting auto-generated `*_generated.json`; merge with manual overrides.
+  - [NEXT] Post-mapping: map freeform → canonical using synonyms + fuzzy match; if low confidence, mark provisional and keep original tag.
+  - [NEXT] Governance
+    - Soft-enforce toggle in calibration (e.g., `enforce_level: off|soft|strict`), default `soft`.
+    - Track metrics: new_tag_rate, canonicalization_rate, taxonomy_coverage, tag_entropy; surface in API.
+    - Review workflow: inbox for provisional/low-confidence mappings; actions: promote to canonical, merge/alias, or ignore.
+  - [NEXT] API (read-first): `GET /api/v1/taxonomy`, `GET /api/v1/synonyms`; later `PUT` with auth + audit (diff + version bump).
+  - [NEXT] UI: admin to view taxonomy, accept merges/aliases, and promote new tags.
+
+- [HIGH] Calendar-as-Query, Notion-as-Context (progress + next)
+  - [COMPLETED] Notion incremental ingestion with batching/retries; ensure columns (`is_leaf`, `abstract`, `last_edited_at`, `text`, `block_type`).
+  - [COMPLETED] Runners: `run_ingest.py` (DB-only), `run_process_range.py` (tagging-only, JSONL logs), `run_build_taxonomy.py` (AI taxonomy), `run_google_calendar_ingest.py`.
+  - [COMPLETED] Google Calendar upsert: dedupe by (source, id|link, date, time); update details/duration/raw.
+  - [NEXT] Retrieval tuning: expose `days_window`, `k` in calibration; add embedding retrieval scores to logs; evaluate R@K.
+  - [NEXT] Abstract backfill: ensure 30–100 word abstracts for leaf blocks; fill gaps.
+
+- [MEDIUM] Observability & metrics
+  - [COMPLETED] Structured JSONL tagging logs with retrieval context and normalized scores.
+  - [NEXT] Summarize logs into metrics (merge_rate, tag_coverage, tag_entropy, new_tag_rate); expose via API + dashboard.
+
+- [MEDIUM] Data/API hygiene
+  - [NEXT] Split calibration vs taxonomy/synonyms resources with clear precedence: manual > generated > calibration hints.
+  - [NEXT] Add read-only taxonomy/synonyms endpoints; wire soft-enforcement toggle into prompts + post-mapping.
+
+- [LOW] UX polish
+  - [NEXT] Show abstracts in UI hovers; simple Review Inbox for provisional tags; bulk merge/rename UI.
+
+- [HIGH] Frontend revamp & design ideology (API-aligned)
+  - Design Ideology 2.0
+    - Clarity-first, information-dense layouts; neutral, unobtrusive visual language.
+    - Trust-by-default: expose system confidence and provenance (retrieval context) rather than hiding it.
+    - Human-in-the-loop by design: quick accept/adjust flows, bulk actions, and audit trails.
+    - Accessibility and performance: keyboard-first workflows, skeleton/loading states, virtualization for large lists.
+  - API Integration (contracts updated)
+    - Update types/clients for: multi-tag (up to 10), tag confidences, review flags, retrieval contexts/abstracts, taxonomy/synonyms endpoints, metrics.
+    - Add feature flags for soft-enforcement toggle and structured JSON log surfacing.
+  - Views to add/update
+    - Processed Activities: multi-tag chips with confidence badges, hover abstracts, filter by review_needed, bulk accept/merge.
+    - Review Inbox: low-confidence/provisional tags queue with approve/merge/ignore actions.
+    - Taxonomy Manager: view taxonomy/synonyms, propose merges/aliases, promote freeform tags.
+    - Metrics Dashboard: merge_rate, tag_coverage, tag_entropy, new_tag_rate trends; links to underlying logs.
+    - Retrieval Context Panel: show top‑K Notion abstracts and scores for each activity.
+  - Component system & styling
+    - Move toward a professional, neutral component library; reduce experimental/Dadaist patterns for improved readability.
+    - Establish tokens for density, spacing, and states; consistent chip/badge patterns for tags and confidences.
+  - Hardening
+    - Pagination/virtualization for large datasets; optimistic updates with rollback; error boundaries and retry toasts.
+
+---
 ### Next Steps (as of 2025-09-09)
 
 - [HIGH] Calendar-as-Query, Notion-as-Context (storage + IR pipeline)

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+import json
 import os
 import sys
 from pathlib import Path
@@ -38,7 +39,7 @@ except Exception:
     build = None  # type: ignore
     HttpError = Exception  # type: ignore
 
-from src.backend.database import RawActivityDAO, RawActivityDB
+from src.backend.database import RawActivityDAO, RawActivityDB, get_db_manager
 
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
@@ -117,6 +118,7 @@ def ingest_to_database(start_date: str, end_date: str, calendar_ids: Optional[Li
     time_max = _rfc3339(end_date, end_of_day=True)
 
     total = 0
+    db = get_db_manager()
     for cal_id in calendar_ids:
         page_token = None
         while True:
@@ -158,10 +160,49 @@ def ingest_to_database(start_date: str, end_date: str, calendar_ids: Optional[Li
                         raw_data=ev,
                     )
                     try:
-                        RawActivityDAO.create(raw)
-                        total += 1
+                        # Deduplicate by event id and start time (or htmlLink)
+                        ev_id = ev.get('id')
+                        params = [
+                            "google_calendar",
+                            ev_id,
+                            ev.get("htmlLink", ""),
+                            date,
+                            time,
+                            time,
+                        ]
+                        rows = db.execute_query(
+                            """
+                            SELECT id FROM raw_activities
+                            WHERE source = ?
+                              AND (json_extract(raw_data, '$.id') = ? OR orig_link = ?)
+                              AND date = ?
+                              AND (time IS ? OR time = ?)
+                            LIMIT 1
+                            """,
+                            params,
+                        )
+                        if rows:
+                            # Update existing
+                            existing_id = rows[0]['id']
+                            db.execute_update(
+                                """
+                                UPDATE raw_activities
+                                SET duration_minutes=?, details=?, orig_link=?, raw_data=?
+                                WHERE id=?
+                                """,
+                                (
+                                    raw.duration_minutes,
+                                    raw.details,
+                                    raw.orig_link,
+                                    json.dumps(raw.raw_data),
+                                    existing_id,
+                                ),
+                            )
+                        else:
+                            RawActivityDAO.create(raw)
+                            total += 1
                     except Exception as e:
-                        print(f"[WARN] Failed to insert event: {e}")
+                        print(f"[WARN] Failed to upsert event: {e}")
 
                 page_token = events_result.get("nextPageToken")
                 if not page_token:

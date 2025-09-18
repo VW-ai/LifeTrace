@@ -1,0 +1,85 @@
+{
+  "meetings": [
+    "calls",
+    "standup",
+    "sync",
+    "conference",
+    "weekly_checkin"
+  ],
+  "coding": [
+    "programming",
+    "development",
+    "software_build"
+  ],
+  "debugging": [
+    "troubleshooting",
+    "issue_resolution"
+  ],
+  "application": [
+    "job_application",
+    "internship_application"
+  ],
+  "project_management": [
+    "project_planning",
+    "task_management"
+  ],
+  "interviews": [
+    "job_interview",
+    "candidate_interview"
+  ],
+  "planning": [
+    "scheduling",
+    "organizing"
+  ],
+  "exercise": [
+    "workout",
+    "gym",
+    "fitness"
+  ],
+  "meals": [
+    "dinner",
+    "lunch",
+    "breakfast"
+  ],
+  "acupuncture": [
+    "therapy",
+    "treatment"
+  ],
+  "rest": [
+    "nap",
+    "break",
+    "relaxation"
+  ],
+  "family_time": [
+    "family_gathering",
+    "family_activity"
+  ],
+  "socializing": [
+    "hanging_out",
+    "going_out"
+  ],
+  "errands": [
+    "grocery_shopping",
+    "picking_up"
+  ],
+  "journaling": [
+    "diary",
+    "logging"
+  ],
+  "travel_planning": [
+    "trip_planning",
+    "itinerary"
+  ],
+  "course_selection": [
+    "class_registration",
+    "enrollment"
+  ],
+  "assignments": [
+    "homework",
+    "projects"
+  ],
+  "study_sessions": [
+    "study_group",
+    "revision"
+  ]
+}
