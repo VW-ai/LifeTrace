@@ -46,8 +46,9 @@ class TagCleaner:
     def __init__(self, api_key: Optional[str] = None, model: str = None):
         """Initialize with OpenAI API configuration."""
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
-        self.client = OpenAI(api_key=self.api_key) if (self.api_key and OpenAI) else None
+        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+        # Use direct initialization like other working tools
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY')) if (os.getenv('OPENAI_API_KEY') and OpenAI) else None
         import logging
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
@@ -55,6 +56,7 @@ class TagCleaner:
         # Known meaningless patterns (fallback if AI unavailable)
         self.meaningless_patterns = {
             'system_artifacts': ['scheduled_activity', 'activities', 'tasks', 'events'],
+            'generic_processes': ['effective_time_management', 'time_management', 'productivity', 'planning', 'organization', 'management'],
             'redundant_plurals': ['meetings', 'writings', 'codings'],
             'meta_tags': ['working', 'things', 'stuff', 'general', 'misc', 'other'],
             'empty_concepts': ['activity', 'item', 'entry']
@@ -82,24 +84,43 @@ class TagCleaner:
     def _ai_analysis(self, tags_with_context: List[Dict[str, Any]]) -> List[TagAnalysis]:
         """Use AI to analyze tag meaningfulness and identify merge opportunities."""
         
-        # Format tags for analysis using centralized prompts
-        tags_text = TagCleanupPrompts.format_tags_for_analysis(tags_with_context)
+        # Process tags in batches to avoid timeouts
+        batch_size = 30 # Process 10 tags at a time to start
+        all_analyses = []
         
-        system_prompt = TagCleanupPrompts.get_tag_analysis_system_prompt()
-        user_prompt = TagCleanupPrompts.get_tag_analysis_user_prompt(tags_text)
+        for i in range(0, len(tags_with_context), batch_size):
+            batch = tags_with_context[i:i + batch_size]
+            self.logger.info(f"Processing batch {i//batch_size + 1}/{(len(tags_with_context) + batch_size - 1)//batch_size} ({len(batch)} tags)")
+            
+            try:
+                # Format tags for analysis using centralized prompts
+                tags_text = TagCleanupPrompts.format_tags_for_analysis(batch)
+                
+                system_prompt = TagCleanupPrompts.get_tag_analysis_system_prompt()
+                user_prompt = TagCleanupPrompts.get_tag_analysis_user_prompt(tags_text)
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.3,
+                    timeout=30  # 30 second timeout
+                )
+                
+                response_text = response.choices[0].message.content
+                self.logger.info(f"AI response for batch {i//batch_size + 1}: {response_text[:200]}...")
+                batch_analyses = self._parse_ai_response(response_text, batch)
+                all_analyses.extend(batch_analyses)
+                
+            except Exception as e:
+                self.logger.warning(f"AI analysis failed for batch {i//batch_size + 1}, using fallback: {e}")
+                # Fall back to pattern matching for this batch
+                batch_analyses = self._fallback_analysis(batch)
+                all_analyses.extend(batch_analyses)
         
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.3,
-            timeout=30  # 30 second timeout
-        )
-        
-        response_text = response.choices[0].message.content
-        return self._parse_ai_response(response_text, tags_with_context)
+        return all_analyses
     
     def _fallback_analysis(self, tags_with_context: List[Dict[str, Any]]) -> List[TagAnalysis]:
         """Fallback analysis using pattern matching when AI unavailable."""
@@ -174,7 +195,15 @@ class TagCleaner:
     def _parse_ai_response(self, response_text: str, original_tags: List[Dict[str, Any]]) -> List[TagAnalysis]:
         """Parse AI response into TagAnalysis objects with merge support."""
         try:
-            response_data = json.loads(response_text)
+            # Strip markdown code blocks if present
+            clean_text = response_text.strip()
+            if clean_text.startswith('```json'):
+                clean_text = clean_text[7:]  # Remove ```json
+            if clean_text.endswith('```'):
+                clean_text = clean_text[:-3]  # Remove ```
+            clean_text = clean_text.strip()
+            
+            response_data = json.loads(clean_text)
             analyses = []
             
             # Create lookup for original tags
@@ -199,19 +228,21 @@ class TagCleaner:
             return self._fallback_analysis(original_tags)
     
     def clean_meaningless_tags(
-        self, 
-        db_manager, 
+        self,
+        db_manager,
         dry_run: bool = True,
-        confidence_threshold: float = 0.7
+        removal_threshold: float = 0.7,
+        merge_threshold: float = 0.8
     ) -> Dict[str, Any]:
         """
-        Main cleanup function - analyze and remove meaningless tags.
-        
+        Main cleanup function - analyze and remove meaningless tags in two phases.
+
         Args:
             db_manager: Database manager instance
             dry_run: If True, only analyze without removing
-            confidence_threshold: Minimum confidence to remove a tag
-        
+            removal_threshold: Minimum confidence to remove a tag
+            merge_threshold: Minimum confidence to merge tags (applied only to surviving tags)
+
         Returns:
             Dict with cleanup results
         """
@@ -228,24 +259,37 @@ class TagCleaner:
         
         # Analyze tags
         analyses = self.analyze_tags(tags_with_context)
-        
-        # Categorize actions
+
+        # PHASE 1: Identify tags for removal using removal_threshold
         tags_to_remove = []
+        surviving_tags = []
+
+        for analysis in analyses:
+            if analysis.action == "remove" and analysis.confidence >= removal_threshold:
+                tags_to_remove.append(analysis)
+            else:
+                surviving_tags.append(analysis)
+
+        self.logger.info(f"Phase 1 complete: {len(tags_to_remove)} tags marked for removal, {len(surviving_tags)} surviving")
+
+        # PHASE 2: Find merges only among surviving tags using merge_threshold
         tags_to_merge = []
         tags_to_keep = []
-        
-        for analysis in analyses:
-            if analysis.confidence >= confidence_threshold:
-                if analysis.action == "remove":
-                    tags_to_remove.append(analysis)
-                elif analysis.action == "merge" and analysis.merge_target:
-                    tags_to_merge.append(analysis)
-                else:
-                    tags_to_keep.append(analysis)
+
+        # Create lookup of surviving tag names for merge validation
+        surviving_tag_names = {analysis.tag_name for analysis in surviving_tags}
+
+        for analysis in surviving_tags:
+            if (analysis.action == "merge" and
+                analysis.merge_target and
+                analysis.confidence >= merge_threshold and
+                analysis.merge_target in surviving_tag_names):  # Only merge into surviving tags
+                tags_to_merge.append(analysis)
             else:
                 tags_to_keep.append(analysis)
         
-        self.logger.info(f"Analysis complete: {len(tags_to_remove)} to remove, {len(tags_to_merge)} to merge")
+        self.logger.info(f"Phase 2 complete: {len(tags_to_merge)} merges identified among surviving tags")
+        self.logger.info(f"Final summary: {len(tags_to_remove)} to remove, {len(tags_to_merge)} to merge, {len(tags_to_keep)} to keep")
         
         # Execute changes if not dry run
         removed_count = 0

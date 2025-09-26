@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -40,10 +41,16 @@ def main():
         help="Actually remove meaningless tags and merge similar ones"
     )
     parser.add_argument(
-        "--confidence-threshold", 
-        type=float, 
+        "--removal-threshold",
+        type=float,
+        default=0.8,
+        help="Minimum confidence threshold to remove tags (default: 0.6)"
+    )
+    parser.add_argument(
+        "--merge-threshold",
+        type=float,
         default=0.6,
-        help="Minimum confidence threshold to take action (default: 0.6)"
+        help="Minimum confidence threshold to merge tags (default: 0.8)"
     )
     
     args = parser.parse_args()
@@ -57,6 +64,18 @@ def main():
         env_path = PROJECT_ROOT / '.env'
         if env_path.exists():
             load_dotenv(env_path)
+            print(f"Loaded .env from {env_path}")
+        else:
+            print(f"Warning: .env file not found at {env_path}")
+    else:
+        print("Warning: python-dotenv not available")
+    
+    # Verify API key is loaded
+    api_key = os.getenv('OPENAI_API_KEY')
+    if api_key:
+        print(f"OpenAI API key loaded: {api_key[:10]}...")
+    else:
+        print("Warning: OPENAI_API_KEY not found in environment")
     
     # Initialize components
     db = get_db_manager()
@@ -65,7 +84,8 @@ def main():
     print("🧹 AI-Powered Tag Cleanup & Merge")
     print("=" * 50)
     print(f"Mode: {'DRY RUN (analysis only)' if args.dry_run else 'LIVE (will modify database)'}")
-    print(f"Confidence Threshold: {args.confidence_threshold}")
+    print(f"Removal Threshold: {args.removal_threshold}")
+    print(f"Merge Threshold: {args.merge_threshold}")
     print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
     
@@ -74,7 +94,8 @@ def main():
         results = tag_cleaner.clean_meaningless_tags(
             db_manager=db,
             dry_run=args.dry_run,
-            confidence_threshold=args.confidence_threshold
+            removal_threshold=args.removal_threshold,
+            merge_threshold=args.merge_threshold
         )
         
         # Display results
