@@ -33,8 +33,10 @@ MEANINGFUL TAGS capture specific, actionable information:
 → Outcomes or purposes that explain why
 
 MEANINGLESS TAGS to remove:
-→ System artifacts that don't describe real activities
-→ Meta-concepts so generic they provide no insight
+→ System artifacts that don't describe real activities (scheduled_activity, activities, tasks, events)
+→ Generic process descriptors (effective_time_management, time_management, productivity)
+→ Meta-concepts so generic they provide no insight (working, general, misc, other, stuff)
+→ Broad categorizations instead of specific actions (management, planning, organization)
 → Malformed or accidental tags
 → Overly abstract terms with no practical value
 
@@ -45,12 +47,21 @@ MERGE OPPORTUNITIES to consolidate:
 → Different spellings or formats of identical meanings
 
 ANALYSIS PRINCIPLES:
-• Consider usage context - frequency and activity examples matter
-• Preserve specificity and useful distinctions
-• Consolidate redundancy without losing meaning
+• Be aggressive about removing generic tags - err on the side of removal
+• Ask: "Does this tag tell me what specific action someone took?"
+• Frequency doesn't make meaningless tags meaningful
+• Remove tags that could apply to almost any activity
+• Preserve only tags that add specific, actionable context
 • All output tags must be in English, lowercase_underscore_format
 
-Trust your analytical judgment. Be thorough but practical.
+CONCRETE EXAMPLES TO REMOVE:
+- scheduled_activity (too generic - what KIND of activity?)
+- effective_time_management (process descriptor, not action)
+- productivity (outcome measure, not specific activity)
+- planning (too broad - planning what?)
+- working (meta-concept, tells us nothing specific)
+
+Trust your analytical judgment. Be aggressive but preserve genuinely useful specificity.
 """
 
     @staticmethod
