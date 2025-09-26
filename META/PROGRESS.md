@@ -2,6 +2,37 @@
 This tracker serves as a log of what we have accomplished. sections are separated by time(date granularity)
 
 ---
+### 2025-09-26 (Tag Quality & Frontend Enhancement)
+
+- [COMPLETED] ✅ **AI Tag Cleanup & Merge System** (Automated Quality Control)
+  - Created specialized AI service `TagCleaner` in `/src/backend/agent/tools/tag_cleaner.py` following REGULATION.md atomicity principles.
+  - Implemented centralized prompts in `/src/backend/agent/prompts/tag_cleanup_prompts.py` using creativity-encouraging approach.
+  - Built dual-action system: **Remove** meaningless tags (system artifacts, meta-concepts) + **Merge** similar variants (meetings→meeting, meal→meals).
+  - Added fallback pattern matching when AI unavailable with smart plural/singular detection.
+  - Created standalone runner `/runner/run_tag_cleanup.py` with dry-run and live modes.
+  - **Test Results**: Analyzed 309 tags, identified 8 for removal (including `scheduled_activity`), 1 for merge. Successfully eliminates noise tags.
+
+- [COMPLETED] ✅ **Frontend TopTagsList Component** (Professional Design-Aligned)
+  - Redesigned component to match user's desired clean, structured layout with numbered cards and keyword badges.
+  - Replaced complex expandable UI with simple list format: rank number, activity name, time estimate, keyword tags.
+  - Added real backend API endpoint `/api/v1/tags/relationships` for tag co-occurrence data.
+  - Enhanced `TagService` with `get_top_tags_with_relationships()` method following existing patterns.
+  - Updated frontend API client to consume real relationship data instead of mock data.
+
+- [COMPLETED] ✅ **Enhanced Tagging Prompt Engineering** (Creativity-Focused)
+  - Completely rewrote tagging prompts in `/src/backend/agent/prompts/tag_prompts.py` to eliminate constraining examples.
+  - Applied principle-based prompt design: "Think about activity across multiple dimensions" vs rigid category lists.
+  - Added automated meaningless tag prevention: prompts avoid system artifacts and meta-tags.
+  - Updated taxonomy builder prompts for data-driven discovery: "Let the data reveal its own patterns."
+  - Implemented English-only constraint with cultural/linguistic translation awareness.
+
+- [COMPLETED] ✅ **Google Calendar Data Quality Fixes**  
+  - Fixed severe duplicate problem: 16,249 → 2,226 clean events through proper deduplication logic.
+  - Resolved SQL parameter binding errors in `ingest_api.py` (time field parameter mismatch).
+  - Created `run_google_calendar_ingest.py` script for clean re-ingestion with schema migration support.
+  - Enhanced deduplication to handle event ID and HTML link matching with date/time validation.
+
+---
 ### 2025-09-09 (Phase 1 complete; Phase 2 started)
 - Branch workflow: set up per-branch worktrees for clean isolation
   - main → /Users/waynewang/smartHistory-main

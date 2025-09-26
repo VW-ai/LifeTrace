@@ -10,6 +10,7 @@ import { AreaChart } from '../../visualizations/AreaChart';
 import { PieChart } from '../../visualizations/PieChart';
 import { MetricCard } from '../../atomic/MetricCard';
 import { ProfessionalButton } from '../../atomic/ProfessionalButton';
+import { TopTagsList } from '../../features/TopTagsList/TopTagsList';
 import { apiClient, type ProcessedActivity, type Tag } from '../../../api/client';
 import { professionalTheme } from '../../../styles/professional-theme';
 
@@ -386,6 +387,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ className }) => {
           )}
         </ChartSection>
       </ChartsGrid>
+
+      <TopTagsList />
     </DashboardContainer>
   );
 };

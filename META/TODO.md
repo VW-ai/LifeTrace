@@ -5,7 +5,33 @@ And every time we resume to development, we should read TODO first to know where
 We follow an append-only strategy in the writing of thie file.
 
 ---
-### Next Steps (as of 2025-09-18)
+### Next Steps (as of 2025-09-26) - CURRENT PRIORITIES
+
+- [HIGH] **Frontend Polish & Professional Design**
+  - Fix TopTagsList styling issues - keywords running together without spaces, missing proper styling classes
+  - Apply professional design system consistently across all components (remove Dadaist experimental patterns)
+  - Add multi-tag chips with confidence badges for processed activities view
+  - Implement proper CSS class usage (card-artistic, artistic-bg) and gradient styling
+  - Add hover effects and proper spacing for keyword badges
+
+- [HIGH] **Tag Cleanup Integration**  
+  - Run live tag cleanup: `python runner/run_tag_cleanup.py --clean` to remove identified meaningless tags
+  - Integrate tag cleanup into processing pipeline as post-processing step
+  - Add cleanup trigger to backend API endpoints for on-demand cleaning
+
+- [MEDIUM] **AI Tag Grouping & Hierarchy**
+  - Implement AI-powered tag categorization (Work → Development → Backend, Personal → Health → Exercise)
+  - Create taxonomy manager view for reviewing and organizing tag hierarchies
+  - Add intelligent tag suggestions based on activity content and existing patterns
+
+- [MEDIUM] **Complete Frontend Features**
+  - Build metrics dashboard with tag coverage, diversity, and quality metrics
+  - Add review inbox for low-confidence/provisional tags with approve/merge/ignore actions
+  - Implement virtualization for large datasets and performance optimizations
+  - Add retrieval context panel showing Notion abstracts used for tagging decisions
+
+---
+### Next Steps (as of 2025-09-18) - ARCHIVE
 
 - [HIGH] Tagging prompts and selection (flexible, multi-dimensional)
   - [COMPLETED] Overhaul prompts to allow 1–10 tags; prefer taxonomy for primary tag; allow new dimension tags (type/topic/tool/context/outcome); keep comma-separated outputs.

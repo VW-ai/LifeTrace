@@ -225,6 +225,18 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="Tag not found")
         return {"message": "Tag deleted successfully"}
 
+    @app.get(f"{API_V1_PREFIX}/tags/relationships")
+    async def get_top_tags_relationships(
+        top_tags_limit: int = Query(default=5, ge=1, le=20),
+        related_tags_limit: int = Query(default=5, ge=1, le=10),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get top tags with their co-occurring related tags."""
+        return await tag_service.get_top_tags_with_relationships(
+            top_tags_limit=top_tags_limit,
+            related_tags_limit=related_tags_limit
+        )
+
     # Processing Endpoints
     @app.post(f"{API_V1_PREFIX}/process/daily", response_model=ProcessingResponse)
     async def trigger_daily_processing(

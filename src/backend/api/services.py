@@ -373,6 +373,69 @@ class TagService:
         # Delete the tag
         TagDAO.delete(tag_id)
         return True
+    
+    async def get_top_tags_with_relationships(
+        self, 
+        top_tags_limit: int = 5,
+        related_tags_limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Get top tags by usage with their most frequent co-occurring tags.
+        
+        Args:
+            top_tags_limit: Number of top tags to analyze
+            related_tags_limit: Number of related tags per top tag
+            
+        Returns:
+            List of dictionaries containing tag info and relationships
+        """
+        # Get top tags by usage
+        top_tags_query = """
+        SELECT name, usage_count 
+        FROM tags 
+        WHERE usage_count > 0
+        ORDER BY usage_count DESC 
+        LIMIT ?;
+        """
+        
+        top_tags = self.db.execute_query(top_tags_query, [top_tags_limit])
+        
+        results = []
+        for tag in top_tags:
+            tag_name = tag['name']
+            usage_count = tag['usage_count']
+            
+            # Get co-occurring tags for this tag
+            relationships_query = """
+            SELECT 
+                t2.name as related_tag,
+                COUNT(*) as co_occurrence_count
+            FROM activity_tags at1
+            JOIN activity_tags at2 ON at1.processed_activity_id = at2.processed_activity_id
+            JOIN tags t1 ON at1.tag_id = t1.id
+            JOIN tags t2 ON at2.tag_id = t2.id
+            WHERE t1.name = ? AND t1.id != t2.id
+            GROUP BY t2.name
+            ORDER BY co_occurrence_count DESC
+            LIMIT ?;
+            """
+            
+            relationships = self.db.execute_query(
+                relationships_query, 
+                [tag_name, related_tags_limit]
+            )
+            
+            # Convert usage count to rough time estimation
+            estimated_hours = max(1, int(usage_count * 0.5))
+            
+            results.append({
+                'name': tag_name.replace('_', ' ').title(),
+                'time': f"{estimated_hours}hr 0mins",
+                'usage_count': usage_count,
+                'keywords': [rel['related_tag'] for rel in relationships]
+            })
+        
+        return results
 
 
 class InsightsService:

@@ -50,31 +50,42 @@ class TagPrompts:
     def get_individual_tag_system_prompt(calibration: Optional[Dict] = None) -> str:
         """System prompt for individual activity tag generation.
 
-        Adds taxonomy and synonym guidance; requires tags to be from the
-        allowed vocabulary. Output is still comma-separated tags to keep
-        compatibility with current TagGenerator parsing.
+        Uses principle-based prompt engineering without constraining examples.
         """
         allowed = TagPrompts._format_allowed_tags(calibration)
         synonyms_hint = TagPrompts._format_synonyms(calibration)
 
         return (
-            "You are an activity tagging assistant that assigns 1–10 high-quality tags for time-tracking and analysis.\n\n"
-            "Rules:\n"
-            "- Prefer the recommended taxonomy below for the PRIMARY tag (make it the first tag).\n"
-            "- You MAY introduce new tags if they better capture specific dimensions; keep them lowercase, snake_case, concise, and non-redundant.\n"
-            "- Aim for layered meaning and diversity across dimensions (avoid near-duplicates):\n"
-            "  • category: work, personal, health, social, admin\n"
-            "  • activity_type/mode: meeting, development, writing, study, exercise\n"
-            "  • domain/topic: auth, ci_cd, frontend, hiring, database\n"
-            "  • tool/tech: python, react, vscode, github_actions, notion\n"
-            "  • context: commute, meals, remote, office, deep_work, quick_task\n"
-            "  • outcome/goal: planning, review, delivery, bugfix, refactor\n"
-            "- Prefer specific canonical tags over vague ones (e.g., development over work) unless no better fit exists.\n"
-            "- Consider synonym cues when mapping to canonical tags.\n\n"
-            f"Recommended tags (taxonomy):\n{allowed}\n\n"
-            f"Synonym cues: {synonyms_hint}\n\n"
-            "Think carefully about distinct dimensions; do not output reasoning.\n"
-            "Output: return ONLY the selected tags (1–10), comma-separated (no JSON, no extra text)."
+            "You are a creative activity analyst who generates insightful English tags that capture both the essence and context of human activities.\n\n"
+            
+            "CREATIVE MANDATE:\n"
+            "• Think beyond surface descriptions to capture deeper meaning and context\n"
+            "• Invent precise tags when existing vocabulary falls short\n"
+            "• Consider multiple dimensions simultaneously: what, how, why, where, with what\n"
+            "• Generate 4-8 tags that collectively tell the complete story\n\n"
+            
+            "DIMENSIONAL EXPLORATION (be creative in each space):\n"
+            "→ Core activity type and its fundamental nature\n"
+            "→ Method, medium, or approach used\n"
+            "→ Subject domains, fields, or areas of knowledge involved\n"
+            "→ Tools, technologies, platforms, or resources engaged\n"
+            "→ Purpose, context, outcome, or situational factors\n\n"
+            
+            "QUALITY THROUGH CREATIVITY:\n"
+            "• Prefer specific, descriptive terms over generic categories\n"
+            "• Each tag should add unique dimensional value\n"
+            "• Balance broad categorization with precise details\n"
+            "• Consider intensity, complexity, and emotional context when relevant\n\n"
+            
+            "CONSTRAINTS (minimal for maximum creativity):\n"
+            "• ALL tags in English (translate concepts from other languages)\n"
+            "• Use lowercase_underscore_format for compound concepts\n"
+            "• Avoid meaningless meta-tags that don't describe actual activities\n\n"
+            
+            f"VOCABULARY FOUNDATION (expand beyond these when needed):\n{allowed}\n\n"
+            f"SYNONYM PATTERNS: {synonyms_hint}\n\n"
+            
+            "Trust your analytical creativity. Be specific. Capture the full context."
         )
 
     @staticmethod
@@ -128,18 +139,23 @@ class TagPrompts:
     def get_taxonomy_builder_system_prompt() -> str:
         """System prompt for building taxonomy and synonyms from activity corpus."""
         return (
-            "You are an expert in building practical tagging systems for personal activity logs.\n"
-            "Your task: create TWO DISTINCT outputs:\n"
-            "1. TAXONOMY: hierarchical categories (parent → children) representing activity types\n"
-            "2. SYNONYMS: alternative words/phrases that should map to the same concept\n\n"
-            "TAXONOMY should be hierarchical organization (e.g., 'work' → ['meetings', 'coding', 'planning'])\n"
-            "SYNONYMS should be alternative terms (e.g., 'meetings' → ['calls', 'video_chat', 'standup', 'sync'])\n\n"
-            "Guidelines:\n"
-            "- Be concrete and specific (prefer 'standup' over 'communication')\n"
-            "- Taxonomy: organize activities by type/domain\n"
-            "- Synonyms: find alternative ways people describe the same activity\n"
-            "- Keep categories under 10, subcategories under 8 per parent\n"
-            "- Total unique tags should be under 80"
+            "You are a creative taxonomy architect who discovers natural patterns in human activity data.\n\n"
+            
+            "Your mission: analyze real activity patterns to build TWO complementary systems:\n"
+            "1. TAXONOMY: hierarchical organization reflecting how activities naturally cluster\n"
+            "2. SYNONYMS: mapping of different ways people express the same concepts\n\n"
+            
+            "CREATIVE APPROACH:\n"
+            "• Let the data reveal its own patterns rather than imposing predetermined categories\n"
+            "• Discover unexpected connections and groupings\n"
+            "• Balance broad utility with specific precision\n"
+            "• Consider cultural, contextual, and personal variations in activity description\n\n"
+            
+            "DESIGN PRINCIPLES:\n"
+            "• Taxonomy should reflect natural activity relationships and workflows\n"
+            "• Synonyms should capture the rich variety of human expression\n"
+            "• Optimize for both discovery (finding activities) and organization (understanding patterns)\n"
+            "• All concepts in English for consistency"
         )
 
     @staticmethod
@@ -148,22 +164,21 @@ class TagPrompts:
         examples_text = "\n".join(activity_examples)
         
         return (
-            "Analyze these activity examples and create a JSON with two DISTINCT fields:\n\n"
-            "1) 'taxonomy': Hierarchical organization of activity types\n"
-            "   - Keys: broad activity domains (e.g., 'work', 'health', 'personal')\n"
-            "   - Values: specific activity types within that domain\n"
-            "   - Example: {'work': ['meetings', 'coding', 'planning'], 'health': ['exercise', 'meals', 'sleep']}\n\n"
-            "2) 'synonyms': Alternative terms for the SAME activity\n"
-            "   - Keys: canonical activity names (from taxonomy or common terms)\n"
-            "   - Values: alternative words/phrases people use for that activity\n"
-            "   - Example: {'meetings': ['calls', 'standup', 'sync', 'conference'], 'exercise': ['gym', 'workout', 'training']}\n\n"
-            "Requirements:\n"
-            "- Base categories on actual data patterns below\n"
-            "- Taxonomy: organize by WHAT TYPE of activity\n"
-            "- Synonyms: capture HOW PEOPLE SAY the same thing\n"
-            "- Be specific and practical (avoid generic terms)\n"
-            "- Return ONLY valid JSON\n\n"
-            f"Activity Examples:\n{examples_text}"
+            "Analyze this activity data and discover its natural organizational patterns.\n\n"
+            "Create a JSON response with two fields:\n\n"
+            "'taxonomy': Hierarchical organization that emerges from the data\n"
+            "   → Keys: major activity domains you discover\n"
+            "   → Values: specific activities within each domain\n\n"
+            "'synonyms': Alternative expressions for the same concepts\n"
+            "   → Keys: canonical terms from your taxonomy or common activities\n"
+            "   → Values: different ways people express that same concept\n\n"
+            "DISCOVERY APPROACH:\n"
+            "• Look for natural clusters and relationships in the data\n"
+            "• Identify recurring themes and patterns\n"
+            "• Notice cultural/linguistic variations and translate concepts to English\n"
+            "• Balance specificity with broad applicability\n\n"
+            f"Activity Data:\n{examples_text}\n\n"
+            "Return valid JSON only."
         )
 
     @staticmethod

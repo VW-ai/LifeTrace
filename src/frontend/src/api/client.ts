@@ -243,6 +243,22 @@ class ApiClient {
     });
   }
 
+  async getTopTagsWithRelationships(
+    topTagsLimit: number = 5,
+    relatedTagsLimit: number = 5
+  ): Promise<ApiResponse<Array<{
+    name: string;
+    time: string;
+    usage_count: number;
+    keywords: string[];
+  }>>> {
+    const params = new URLSearchParams();
+    params.append('top_tags_limit', topTagsLimit.toString());
+    params.append('related_tags_limit', relatedTagsLimit.toString());
+
+    return this.request(`/tags/relationships?${params.toString()}`);
+  }
+
   // Insights endpoints
   async getTagDistribution(
     startDate?: string,
