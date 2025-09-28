@@ -76,3 +76,5 @@ setup_api.py
 # API Test Artifacts
 test_output/
 api_test_results/
+
+*.zip

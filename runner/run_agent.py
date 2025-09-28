@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-SmartHistory AI Agent - Main Entry Point
+SmartHistory Agent Runner (DB-first)
 
-A convenient script to run the AI agent from the project root.
-This script handles path setup and provides easy access to agent functionality.
+Modern entry that delegates to the processing service and database-first
+pipeline. Prefer `runner/sh.py process` for richer controls; this script
+remains as a convenience wrapper to run DB-backed processing.
 
 Usage:
-    python run_agent.py --help                    # Show help
-    python run_agent.py --mode daily             # Process daily activities  
-    python run_agent.py --mode insights          # Generate insights
-    python run_agent.py --test                   # Run capability test
+    python runner/run_agent.py --start YYYY-MM-DD --end YYYY-MM-DD [--regenerate-system-tags]
+    python runner/run_agent.py --test
 """
 
 import os
@@ -22,35 +21,23 @@ PROJECT_ROOT = Path(__file__).parent.parent  # Go up one level to actual project
 sys.path.insert(0, str(PROJECT_ROOT))
 
 def run_daily_processing(args):
-    """Run daily activity processing (database-first)."""
-    from src.backend.agent.core.agent import run_daily_processing as run_daily
-    
-    # Convert argparse Namespace to dict-like object for compatibility
-    class Args:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-    
-    # Create args object for database-first processing
-    agent_args = Args(
-        notion_file=args.notion_file,  # Optional - only for legacy fallback
-        calendar_file=args.calendar_file,  # Optional - only for legacy fallback 
-        output_dir=args.output_dir or 'agent_output'
+    """Run processing via API service (DB-first)."""
+    import asyncio
+    from src.backend.api.dependencies import get_processing_service
+    processing = get_processing_service()
+    res = asyncio.run(
+        processing.reprocess_date_range(
+            date_start=args.start or "0001-01-01",
+            date_end=args.end or "9999-12-31",
+            regenerate_system_tags=bool(args.regenerate_system_tags),
+        )
     )
-    
-    return run_daily(agent_args)
+    return res
 
 def run_insights_generation(args):
-    """Run insights generation."""
-    from src.backend.agent.core.agent import run_insights_generation as run_insights
-    
-    class Args:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-    
-    agent_args = Args(output_dir=args.output_dir or 'agent_output')
-    return run_insights(agent_args)
+    """Deprecated: insights moved to dashboards. Placeholder."""
+    print("Insights generation is deprecated in this runner. Use API/Frontend dashboards.")
+    return None
 
 def run_capability_test():
     """Run the agent capability test."""
@@ -77,14 +64,10 @@ def check_prerequisites():
     """Check that required files and setup exist."""
     issues = []
     
-    # Check for .env file
+    # .env is optional if environment already configured
     env_file = PROJECT_ROOT / '.env'
     if not env_file.exists():
-        issues.append("Missing .env file with API keys")
-    
-    # Check for virtual environment activation
-    if not os.environ.get('VIRTUAL_ENV'):
-        issues.append("Virtual environment not activated (run: source src/backend/act.sh)")
+        issues.append(".env not found (optional if env vars set)")
     
     # Check for required Python packages
     try:
@@ -105,7 +88,7 @@ def check_prerequisites():
 def main():
     """Main entry point with argument parsing."""
     parser = argparse.ArgumentParser(
-        description='SmartHistory AI Agent - Intelligent Activity Processing',
+        description='SmartHistory Agent Runner (DB-first processing)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -116,22 +99,12 @@ Examples:
         """
     )
     
-    parser.add_argument('--mode',
-                       choices=['daily', 'insights'],
-                       help='Processing mode: daily processing or insights generation')
-    
     parser.add_argument('--test',
                        action='store_true',
                        help='Run agent capability test')
-    
-    parser.add_argument('--notion-file',
-                       help='Path to parsed Notion content file (legacy fallback only)')
-    
-    parser.add_argument('--calendar-file',
-                       help='Path to parsed Google Calendar events file (legacy fallback only)')
-    
-    parser.add_argument('--output-dir',
-                       help='Directory for output files')
+    parser.add_argument('--start', help='Start date YYYY-MM-DD (optional)')
+    parser.add_argument('--end', help='End date YYYY-MM-DD (optional)')
+    parser.add_argument('--regenerate-system-tags', action='store_true')
     
     parser.add_argument('--skip-checks',
                        action='store_true', 
@@ -139,10 +112,10 @@ Examples:
     
     args = parser.parse_args()
     
-    # Show help if no arguments provided
-    if not any([args.mode, args.test]):
-        parser.print_help()
-        return
+    # Default to processing full range if no args
+    if not any([args.test, args.start, args.end]):
+        args.start = "0001-01-01"
+        args.end = "9999-12-31"
     
     # Check prerequisites unless skipped
     if not args.skip_checks and not check_prerequisites():
@@ -155,20 +128,18 @@ Examples:
         if args.test:
             success = run_capability_test()
             sys.exit(0 if success else 1)
-            
-        elif args.mode == 'daily':
+        else:
             report = run_daily_processing(args)
             if report and report.get('status') == 'success':
-                print("\n✅ Daily processing completed successfully!")
-                print(f"📊 Processed {report['processed_counts']['raw_activities']} activities")
-                print(f"🏷️ Generated {report['tag_analysis']['total_unique_tags']} unique tags")
+                print("\n✅ Processing completed!")
+                print(f"📊 Deleted prior processed in window: {report.get('deleted_processed')} ")
+                counts = report.get('processed_counts', {})
+                print(f"📊 Processed raw: {counts.get('raw_activities')} | processed: {counts.get('processed_activities')}")
+                tags = report.get('tag_analysis', {})
+                print(f"🏷️ Unique tags: {tags.get('total_unique_tags')} | Avg per activity: {tags.get('average_tags_per_activity')} ")
             else:
-                print("\n❌ Daily processing failed or returned no data")
+                print("\n❌ Processing failed or returned no data")
                 sys.exit(1)
-                
-        elif args.mode == 'insights':
-            run_insights_generation(args)
-            print("\n✅ Insights generation completed!")
             
     except KeyboardInterrupt:
         print("\n\n⏸️ Operation cancelled by user")

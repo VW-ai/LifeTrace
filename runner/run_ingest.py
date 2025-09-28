@@ -94,7 +94,7 @@ def main():
         except Exception as e:
             print({"status": "error", "source": "google_calendar", "message": str(e)})
 
-        # Notion API ingest
+        # Notion API ingest (to notion_* tables only)
         print(f"[2/3] Ingesting Notion workspace → DB")
         try:
             from src.backend.parsers.notion.incremental_ingest import IncrementalNotionIngestor
@@ -121,4 +121,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

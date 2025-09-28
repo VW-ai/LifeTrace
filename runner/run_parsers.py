@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-Database-First Parser Runner for SmartHistory
+DEPRECATED: Legacy Parser Runner
+
+⚠️  WARNING: This file is deprecated and will be removed in a future version.
+⚠️  MIGRATION: Use `python runner/sh.py ingest` instead for database ingestion.
+⚠️  REASON: Superseded by unified sh.py runner with better error handling and logging.
+
+Database-First Parser Runner for SmartHistory (Legacy)
 
 Runs parsers to directly populate the database with raw activities.
 No more JSON intermediate files!

@@ -71,6 +71,7 @@ class IncrementalNotionIngestor:
         self.client = Client(auth=api_key)
         self.batch_size = batch_size
         self.processed_pages: Set[str] = set()
+        self.processed_blocks: Set[str] = set()
         self.total_blocks_processed = 0
         self.total_pages_processed = 0
         self.blocks_updated = 0

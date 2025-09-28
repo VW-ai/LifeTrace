@@ -41,6 +41,14 @@ def main():
         help="Actually remove meaningless tags and merge similar ones"
     )
     parser.add_argument(
+        "--start",
+        help="Optional start date YYYY-MM-DD to scope cleanup to activities in range"
+    )
+    parser.add_argument(
+        "--end",
+        help="Optional end date YYYY-MM-DD to scope cleanup to activities in range"
+    )
+    parser.add_argument(
         "--removal-threshold",
         type=float,
         default=0.8,
@@ -95,7 +103,9 @@ def main():
             db_manager=db,
             dry_run=args.dry_run,
             removal_threshold=args.removal_threshold,
-            merge_threshold=args.merge_threshold
+            merge_threshold=args.merge_threshold,
+            date_start=args.start,
+            date_end=args.end,
         )
         
         # Display results

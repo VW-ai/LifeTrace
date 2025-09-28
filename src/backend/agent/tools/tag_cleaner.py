@@ -232,7 +232,9 @@ class TagCleaner:
         db_manager,
         dry_run: bool = True,
         removal_threshold: float = 0.7,
-        merge_threshold: float = 0.8
+        merge_threshold: float = 0.8,
+        date_start: Optional[str] = None,
+        date_end: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Main cleanup function - analyze and remove meaningless tags in two phases.
@@ -251,8 +253,11 @@ class TagCleaner:
         if self.client:
             self.logger.info(f"Using model: {self.model}")
         
-        # Get all tags with context
-        tags_with_context = self._fetch_tags_with_context(db_manager)
+        # Get tags with context (optionally scoped to date range)
+        if date_start or date_end:
+            tags_with_context = self._fetch_tags_with_context_range(db_manager, date_start, date_end)
+        else:
+            tags_with_context = self._fetch_tags_with_context(db_manager)
         
         if not tags_with_context:
             return {"status": "no_tags", "message": "No tags found to analyze"}
@@ -294,13 +299,31 @@ class TagCleaner:
         # Execute changes if not dry run
         removed_count = 0
         merged_count = 0
-        
+
         if not dry_run:
-            if tags_to_remove:
-                removed_count = self._remove_tags(db_manager, [t.tag_name for t in tags_to_remove])
-            if tags_to_merge:
-                merged_count = self._merge_tags(db_manager, tags_to_merge)
-        
+            if date_start or date_end:
+                # Range-scoped operations: only affect activity_tags within range
+                if tags_to_remove:
+                    removed_count = self._remove_activity_tags_in_range(
+                        db_manager,
+                        [t.tag_name for t in tags_to_remove],
+                        date_start,
+                        date_end,
+                    )
+                if tags_to_merge:
+                    merged_count = self._merge_tags_in_range(
+                        db_manager,
+                        tags_to_merge,
+                        date_start,
+                        date_end,
+                    )
+            else:
+                # Global operations
+                if tags_to_remove:
+                    removed_count = self._remove_tags(db_manager, [t.tag_name for t in tags_to_remove])
+                if tags_to_merge:
+                    merged_count = self._merge_tags(db_manager, tags_to_merge)
+
         return {
             "status": "success",
             "total_analyzed": len(analyses),
@@ -309,6 +332,10 @@ class TagCleaner:
             "removed": removed_count,
             "merged": merged_count,
             "dry_run": dry_run,
+            "scope": {
+                "date_start": date_start,
+                "date_end": date_end,
+            },
             "tags_to_remove": [
                 {
                     "name": t.tag_name,
@@ -327,6 +354,143 @@ class TagCleaner:
                 for t in tags_to_merge
             ]
         }
+
+    def _fetch_tags_with_context_range(
+        self, db_manager, date_start: Optional[str], date_end: Optional[str]
+    ) -> List[Dict[str, Any]]:
+        """Fetch tags with usage context limited to processed_activities in date range."""
+        conditions = []
+        params: list[Any] = []  # type: ignore
+        if date_start:
+            conditions.append("pa.date >= ?")
+            params.append(date_start)
+        if date_end:
+            conditions.append("pa.date <= ?")
+            params.append(date_end)
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+        SELECT 
+            t.name,
+            COUNT(at.id) as usage_count_in_range,
+            GROUP_CONCAT(pa.combined_details, ' | ') as sample_activities
+        FROM tags t
+        JOIN activity_tags at ON t.id = at.tag_id
+        JOIN processed_activities pa ON at.processed_activity_id = pa.id
+        {where_clause}
+        GROUP BY t.id, t.name
+        ORDER BY usage_count_in_range DESC
+        """
+        rows = db_manager.execute_query(query, params)
+
+        result = []
+        for row in rows:
+            activities_text = row['sample_activities'] or ""
+            sample_activities = [
+                act.strip()[:50] + "..." if len(act.strip()) > 50 else act.strip()
+                for act in activities_text.split(' | ')[:5]
+                if act.strip()
+            ]
+            result.append(
+                {
+                    'name': row['name'],
+                    'usage_count': row['usage_count_in_range'],
+                    'sample_activities': sample_activities,
+                }
+            )
+        return result
+
+    def _remove_activity_tags_in_range(
+        self, db_manager, tag_names: List[str], date_start: Optional[str], date_end: Optional[str]
+    ) -> int:
+        """Remove activity_tags rows for given tag names limited to processed activities in the given range."""
+        if not tag_names:
+            return 0
+        # Build dynamic IN clause
+        placeholders = ",".join(["?" for _ in tag_names])
+        params: list[Any] = []  # type: ignore
+        conditions = [f"t.name IN ({placeholders})"]
+        params.extend(tag_names)
+        if date_start:
+            conditions.append("pa.date >= ?")
+            params.append(date_start)
+        if date_end:
+            conditions.append("pa.date <= ?")
+            params.append(date_end)
+        where_clause = " AND ".join(conditions)
+
+        # Delete with join via subselect to respect triggers
+        delete_query = f"""
+        DELETE FROM activity_tags
+        WHERE id IN (
+            SELECT at.id FROM activity_tags at
+            JOIN tags t ON at.tag_id = t.id
+            JOIN processed_activities pa ON at.processed_activity_id = pa.id
+            WHERE {where_clause}
+        )
+        """
+        return db_manager.execute_update(delete_query, params)
+
+    def _merge_tags_in_range(
+        self, db_manager, merges: List[TagAnalysis], date_start: Optional[str], date_end: Optional[str]
+    ) -> int:
+        """Merge tags within range by changing activity_tags.tag_id for activities in range only.
+        Recomputes usage_count for affected tags globally after changes.
+        """
+        merged_links = 0
+        affected_names: Set[str] = set()
+        for m in merges:
+            if not m.merge_target:
+                continue
+            # Resolve ids
+            src_row = db_manager.execute_query("SELECT id FROM tags WHERE name = ?", [m.tag_name])
+            tgt_row = db_manager.execute_query("SELECT id FROM tags WHERE name = ?", [m.merge_target])
+            if not src_row or not tgt_row:
+                continue
+            src_id = src_row[0]['id']
+            tgt_id = tgt_row[0]['id']
+
+            # Update only rows in range and avoid creating duplicates for same activity
+            params: list[Any] = [tgt_id, src_id]
+            conditions = ["pa.date BETWEEN ? AND ?"] if (date_start and date_end) else []
+            if date_start and date_end:
+                params.extend([date_start, date_end])
+            elif date_start:
+                conditions = ["pa.date >= ?"]
+                params.append(date_start)
+            elif date_end:
+                conditions = ["pa.date <= ?"]
+                params.append(date_end)
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            update_query = f"""
+            UPDATE activity_tags
+            SET tag_id = ?
+            WHERE tag_id = ?
+              AND processed_activity_id IN (
+                 SELECT pa.id FROM processed_activities pa WHERE {where_clause}
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM activity_tags at2
+                  WHERE at2.processed_activity_id = activity_tags.processed_activity_id
+                    AND at2.tag_id = ?
+              )
+            """
+            # Need target id again for dedupe NOT EXISTS
+            params.append(tgt_id)
+            merged_links += db_manager.execute_update(update_query, params)
+            affected_names.update([m.tag_name, m.merge_target])
+
+        # Recompute global usage_count for affected tags
+        for name in affected_names:
+            row = db_manager.execute_query("SELECT id FROM tags WHERE name = ?", [name])
+            if not row:
+                continue
+            tag_id = row[0]['id']
+            cnt = db_manager.execute_query("SELECT COUNT(*) as c FROM activity_tags WHERE tag_id = ?", [tag_id])[0]['c']
+            db_manager.execute_update("UPDATE tags SET usage_count = ? WHERE id = ?", [cnt, tag_id])
+
+        return merged_links
     
     def _fetch_tags_with_context(self, db_manager) -> List[Dict[str, Any]]:
         """Fetch all tags with usage context from database."""

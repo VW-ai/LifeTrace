@@ -1,6 +1,15 @@
 # Google Calendar Parser
 
-## Purpose
+⚠️ **DEPRECATED - DO NOT USE**
+
+**Migration Path**: Use `ingest_api.py` for direct database ingestion
+**Removal Timeline**: Target removal after documentation updates complete
+**Status**: Superseded by database-first architecture
+**Replacement**: `src/backend/parsers/google_calendar/ingest_api.py`
+
+---
+
+## Purpose (Legacy)
 This module parses Google Calendar events from JSON format into a standardized document format compatible with the smartHistory system. It filters events based on their `updated` timestamp and extracts relevant information for activity tracking.
 
 ## Core Logic
