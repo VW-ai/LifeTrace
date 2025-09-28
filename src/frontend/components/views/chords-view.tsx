@@ -143,7 +143,7 @@ export function ChordsView({ height = 600 }: { height?: number }) {
         .attr("dominant-baseline", "middle")
         .style("font-size", "12px")
         .style("font-weight", "500")
-        .text(tagNodes[d.index].name)
+        .text(tagNodes[d.index].name.replace(/_/g, ' '))
     })
 
     // Add ribbons (connections)
@@ -260,7 +260,7 @@ export function ChordsView({ height = 600 }: { height?: number }) {
                         borderColor: getTagColor(hoveredTag) + "40",
                       }}
                     >
-                      {hoveredTag}
+                      {hoveredTag.replace(/_/g, ' ')}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {events.filter((e) => e.selected_tags.includes(hoveredTag)).length} activities
@@ -286,7 +286,7 @@ export function ChordsView({ height = 600 }: { height?: number }) {
                         .map(([tag, count]) => (
                           <div key={tag} className="flex items-center justify-between text-sm">
                             <Badge variant="outline" className="text-xs">
-                              {tag}
+                              {tag.replace(/_/g, ' ')}
                             </Badge>
                             <span className="text-muted-foreground">{count}x</span>
                           </div>
@@ -303,7 +303,7 @@ export function ChordsView({ height = 600 }: { height?: number }) {
                         color: getTagColor(selectedConnection.source),
                       }}
                     >
-                      {selectedConnection.source}
+                      {selectedConnection.source.replace(/_/g, ' ')}
                     </Badge>
                     <span className="text-muted-foreground">+</span>
                     <Badge
@@ -312,7 +312,7 @@ export function ChordsView({ height = 600 }: { height?: number }) {
                         color: getTagColor(selectedConnection.target),
                       }}
                     >
-                      {selectedConnection.target}
+                      {selectedConnection.target.replace(/_/g, ' ')}
                     </Badge>
                   </div>
                   <div>

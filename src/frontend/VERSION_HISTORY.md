@@ -1,0 +1,115 @@
+# Frontend Version History
+
+## Current State (Before Upgrade) - 2025-09-28
+
+### Package.json Dependencies
+```json
+{
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@radix-ui/react-accordion": "1.2.2",
+    "@radix-ui/react-alert-dialog": "1.1.4",
+    "@radix-ui/react-aspect-ratio": "1.1.1",
+    "@radix-ui/react-avatar": "1.1.2",
+    "@radix-ui/react-checkbox": "1.1.3",
+    "@radix-ui/react-collapsible": "1.1.2",
+    "@radix-ui/react-context-menu": "2.2.4",
+    "@radix-ui/react-dialog": "1.1.4",
+    "@radix-ui/react-dropdown-menu": "2.1.4",
+    "@radix-ui/react-hover-card": "1.1.4",
+    "@radix-ui/react-label": "2.1.1",
+    "@radix-ui/react-menubar": "1.1.4",
+    "@radix-ui/react-navigation-menu": "1.2.3",
+    "@radix-ui/react-popover": "1.1.4",
+    "@radix-ui/react-progress": "1.1.1",
+    "@radix-ui/react-radio-group": "1.2.2",
+    "@radix-ui/react-scroll-area": "1.2.2",
+    "@radix-ui/react-select": "2.1.4",
+    "@radix-ui/react-separator": "1.1.1",
+    "@radix-ui/react-slider": "1.2.2",
+    "@radix-ui/react-slot": "1.1.1",
+    "@radix-ui/react-switch": "1.1.2",
+    "@radix-ui/react-tabs": "1.1.2",
+    "@radix-ui/react-toast": "1.2.4",
+    "@radix-ui/react-toggle": "1.1.1",
+    "@radix-ui/react-toggle-group": "1.1.1",
+    "@radix-ui/react-tooltip": "1.1.6",
+    "@vercel/analytics": "1.3.1",
+    "autoprefixer": "^10.4.20",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "1.0.4",
+    "date-fns": "4.1.0",
+    "embla-carousel-react": "8.5.1",
+    "geist": "^1.3.1",
+    "input-otp": "1.4.1",
+    "lucide-react": "^0.454.0",
+    "next": "14.2.25",
+    "next-themes": "^0.4.6",
+    "react": "^19",
+    "react-day-picker": "9.8.0",
+    "react-dom": "^19",
+    "react-hook-form": "^7.60.0",
+    "react-resizable-panels": "^2.1.7",
+    "recharts": "2.15.4",
+    "sonner": "^1.7.4",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "^0.9.9",
+    "zod": "3.25.67",
+    "zustand": "5.0.8",
+    "d3": "7.9.0",
+    "immutable": "5.1.3"
+  }
+}
+```
+
+### Actually Installed Versions (from npm list)
+```
+├── next@14.2.16 (MISMATCH: package.json says 14.2.25)
+├── react@18.3.1 (MISMATCH: package.json says ^19)
+├── react-dom@18.3.1 (MISMATCH: package.json says ^19)
+├── @radix-ui/react-dialog@1.1.15 (MISMATCH: package.json says 1.1.4)
+├── @radix-ui/react-popover@1.1.15 (MISMATCH: package.json says 1.1.4)
+├── @radix-ui/react-scroll-area@1.2.10 (MISMATCH: package.json says 1.2.2)
+├── @radix-ui/react-select@2.2.6 (MISMATCH: package.json says 2.1.4)
+├── @radix-ui/react-separator@1.1.7 (MISMATCH: package.json says 1.1.1)
+├── @radix-ui/react-slot@1.2.3 (MISMATCH: package.json says 1.1.1)
+├── @vercel/analytics@1.5.0 (MISMATCH: package.json says 1.3.1)
+├── lucide-react@0.544.0 (MISMATCH: package.json says ^0.454.0)
+```
+
+### Key Issues Identified
+1. **React Version Conflict**: Package.json specifies React 19, but React 18.3.1 is installed
+2. **Next.js Version Mismatch**: Package.json specifies 14.2.25, but 14.2.16 is installed
+3. **Radix UI Conflicts**: Most Radix UI packages expect React 18, causing peer dependency warnings
+4. **Missing Dependencies**: Many packages listed in package.json are not actually installed
+
+### Missing/Unmet Dependencies
+- @radix-ui/react-progress@1.1.1 (causing build errors)
+- @radix-ui/react-slider@1.2.2 (causing build errors)
+- @radix-ui/react-switch@1.1.2 (causing build errors)
+- Multiple other Radix UI components
+
+### Error Messages Seen
+```
+Module not found: Can't resolve '@radix-ui/react-progress'
+Module not found: Can't resolve '@radix-ui/react-slider'
+```
+
+### Components Created as Workarounds
+- Created custom progress bar using pure CSS (removed dependency)
+- Created custom sliders using HTML range inputs + CSS
+- Added custom slider styling in globals.css
+
+## Upgrade Plan
+1. Upgrade Next.js to version 15 (supports React 19)
+2. Update all Radix UI packages to latest versions compatible with React 19
+3. Clean up any remaining dependency conflicts
+4. Test all settings components work correctly
+
+## Target Versions
+- Next.js: 15.x (latest)
+- React: 19.x (latest)
+- React DOM: 19.x (latest)
+- Radix UI: Latest versions supporting React 19

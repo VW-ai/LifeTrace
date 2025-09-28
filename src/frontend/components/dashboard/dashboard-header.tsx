@@ -113,7 +113,11 @@ export function DashboardHeader() {
 
             <ShareButton />
 
-            <Button variant="ghost" size="sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/settings'}
+            >
               <Settings className="h-4 w-4" />
             </Button>
           </div>

@@ -65,7 +65,7 @@ export function StoriesView() {
 
         storyList.push({
           id: `sequence-${tag}`,
-          title: `${tag.charAt(0).toUpperCase() + tag.slice(1)} Journey`,
+          title: `${tag.replace(/_/g, ' ').charAt(0).toUpperCase() + tag.replace(/_/g, ' ').slice(1)} Journey`,
           description: `A sequence of ${tag}-related activities spanning multiple days`,
           pattern: "sequence",
           events: allEvents.map((e) => ({
@@ -108,7 +108,7 @@ export function StoriesView() {
         storyList.push({
           id: `routine-${pattern}`,
           title: `${dayNames[Number.parseInt(dayOfWeek)]} Routine`,
-          description: `Regular ${tags.join(" + ")} activities on ${dayNames[Number.parseInt(dayOfWeek)]}s`,
+          description: `Regular ${tags.map(t => t.replace(/_/g, ' ')).join(" + ")} activities on ${dayNames[Number.parseInt(dayOfWeek)]}s`,
           pattern: "routine",
           events: patternEvents.map((e) => ({
             id: e.id,
@@ -194,8 +194,8 @@ export function StoriesView() {
 
           storyList.push({
             id: `trend-${tag}`,
-            title: `Growing Focus: ${tag.charAt(0).toUpperCase() + tag.slice(1)}`,
-            description: `Increasing time spent on ${tag} activities over recent weeks`,
+            title: `Growing Focus: ${tag.replace(/_/g, ' ').charAt(0).toUpperCase() + tag.replace(/_/g, ' ').slice(1)}`,
+            description: `Increasing time spent on ${tag.replace(/_/g, ' ')} activities over recent weeks`,
             pattern: "trend",
             events: trendEvents.map((e) => ({
               id: e.id,
@@ -297,7 +297,7 @@ export function StoriesView() {
                                 borderColor: getTagColor(tag) + "40",
                               }}
                             >
-                              {tag}
+                              {tag.replace(/_/g, ' ')}
                             </Badge>
                           ))}
                           {story.tags.length > 4 && (
