@@ -388,6 +388,36 @@ def create_app() -> FastAPI:
             date_start=date_start, date_end=date_end, regenerate_system_tags=regenerate_system_tags
         )
 
+    # Tag Management Endpoints
+    @app.post(f"{API_V1_PREFIX}/tags/cleanup", response_model=TagCleanupResponse)
+    async def cleanup_tags(
+        request: TagCleanupRequest,
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Clean up meaningless tags using AI analysis."""
+        return await tag_service.cleanup_tags(request)
+
+    @app.post(f"{API_V1_PREFIX}/taxonomy/build", response_model=TaxonomyBuildResponse)
+    async def build_taxonomy(
+        request: TaxonomyBuildRequest,
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Build AI-generated tag taxonomy and synonyms."""
+        return await processing_service.build_taxonomy(request)
+
+    @app.get(f"{API_V1_PREFIX}/processing/logs", response_model=ProcessingLogsResponse)
+    async def get_processing_logs(
+        limit: int = Query(default=100, ge=1, le=1000),
+        offset: int = Query(default=0, ge=0),
+        level: Optional[str] = Query(None, pattern=r'^(DEBUG|INFO|WARN|ERROR)$'),
+        source: Optional[str] = Query(None, description="Filter by log source"),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Get processing logs with filtering and pagination."""
+        return await processing_service.get_processing_logs(
+            limit=limit, offset=offset, level=level, source=source
+        )
+
     # System Endpoints
     @app.get(f"{API_V1_PREFIX}/system/health", response_model=SystemHealthResponse)
     async def get_system_health(

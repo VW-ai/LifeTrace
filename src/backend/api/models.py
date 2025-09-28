@@ -215,6 +215,22 @@ class ImportRequest(BaseModel):
     hours_since_last_update: int = Field(default=168, ge=1, le=8760)  # 1 hour to 1 year
 
 
+class TagCleanupRequest(BaseModel):
+    """Request to clean up meaningless tags."""
+    dry_run: bool = Field(default=True, description="If true, only analyze without removing")
+    removal_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Minimum confidence to remove a tag")
+    merge_threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Minimum confidence to merge tags")
+    date_start: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$', description="Start date for scoped cleanup")
+    date_end: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$', description="End date for scoped cleanup")
+
+
+class TaxonomyBuildRequest(BaseModel):
+    """Request to build AI-generated tag taxonomy."""
+    date_start: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$', description="Start date for data scope")
+    date_end: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}-\d{2}$', description="End date for data scope")
+    force_rebuild: bool = Field(default=False, description="Force rebuild even if recent taxonomy exists")
+
+
 # Processing Response Models
 class ProcessingCounts(BaseModel):
     """Processing operation counts."""
@@ -244,6 +260,54 @@ class ProcessingStatus(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
     error_message: Optional[str] = None
+
+
+class TagCleanupAction(BaseModel):
+    """Individual tag cleanup action."""
+    name: str
+    reason: str
+    confidence: float
+    target: Optional[str] = None  # For merge actions
+
+
+class TagCleanupResponse(BaseModel):
+    """Response from tag cleanup operation."""
+    status: str
+    total_analyzed: int
+    marked_for_removal: int
+    marked_for_merge: int
+    removed: int
+    merged: int
+    dry_run: bool
+    scope: Dict[str, Optional[str]]  # date_start, date_end
+    tags_to_remove: List[TagCleanupAction]
+    tags_to_merge: List[TagCleanupAction]
+
+
+class TaxonomyBuildResponse(BaseModel):
+    """Response from taxonomy building operation."""
+    status: str
+    message: str
+    files_generated: List[str]
+    taxonomy_size: Optional[int] = None
+    synonyms_count: Optional[int] = None
+    data_scope: Dict[str, Optional[str]]  # date_start, date_end
+
+
+class ProcessingLogEntry(BaseModel):
+    """Individual processing log entry."""
+    timestamp: datetime
+    level: str  # DEBUG, INFO, WARN, ERROR
+    message: str
+    source: str  # component that generated the log
+    context: Optional[Dict[str, Any]] = None
+
+
+class ProcessingLogsResponse(BaseModel):
+    """Response containing processing logs."""
+    logs: List[ProcessingLogEntry]
+    total_count: int
+    page_info: 'PageInfo'
 
 
 # System Response Models

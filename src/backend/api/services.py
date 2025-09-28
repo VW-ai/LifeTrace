@@ -614,6 +614,71 @@ class TagService:
 
         return relationships
 
+    async def cleanup_tags(self, request: TagCleanupRequest) -> TagCleanupResponse:
+        """Clean up meaningless tags using AI analysis."""
+        try:
+            from src.backend.agent.tools.tag_cleaner import TagCleaner
+
+            # Initialize tag cleaner
+            cleaner = TagCleaner()
+
+            # Perform cleanup
+            result = cleaner.clean_meaningless_tags(
+                db_manager=self.db,
+                dry_run=request.dry_run,
+                removal_threshold=request.removal_threshold,
+                merge_threshold=request.merge_threshold,
+                date_start=request.date_start,
+                date_end=request.date_end
+            )
+
+            # Convert to API response format
+            tags_to_remove = [
+                TagCleanupAction(
+                    name=tag["name"],
+                    reason=tag["reason"],
+                    confidence=tag["confidence"]
+                )
+                for tag in result.get("tags_to_remove", [])
+            ]
+
+            tags_to_merge = [
+                TagCleanupAction(
+                    name=tag["source"],
+                    reason=tag["reason"],
+                    confidence=tag["confidence"],
+                    target=tag["target"]
+                )
+                for tag in result.get("tags_to_merge", [])
+            ]
+
+            return TagCleanupResponse(
+                status=result["status"],
+                total_analyzed=result["total_analyzed"],
+                marked_for_removal=result["marked_for_removal"],
+                marked_for_merge=result["marked_for_merge"],
+                removed=result["removed"],
+                merged=result["merged"],
+                dry_run=result["dry_run"],
+                scope=result["scope"],
+                tags_to_remove=tags_to_remove,
+                tags_to_merge=tags_to_merge
+            )
+
+        except Exception as e:
+            return TagCleanupResponse(
+                status="error",
+                total_analyzed=0,
+                marked_for_removal=0,
+                marked_for_merge=0,
+                removed=0,
+                merged=0,
+                dry_run=request.dry_run,
+                scope={"date_start": request.date_start, "date_end": request.date_end},
+                tags_to_remove=[],
+                tags_to_merge=[]
+            )
+
 
 class InsightsService:
     """Service for insights and analytics operations."""
@@ -1000,6 +1065,133 @@ class ProcessingService:
             }
         except Exception as e:
             return {"error": str(e)}
+
+    async def build_taxonomy(self, request: TaxonomyBuildRequest) -> TaxonomyBuildResponse:
+        """Build AI-generated tag taxonomy and synonyms."""
+        try:
+            from src.backend.agent.tools.taxonomy_builder import build_and_save
+
+            # Call taxonomy builder
+            result = build_and_save(
+                date_start=request.date_start,
+                date_end=request.date_end
+            )
+
+            # Parse the result to extract information
+            if isinstance(result, dict) and result.get("status") == "success":
+                return TaxonomyBuildResponse(
+                    status="success",
+                    message=result.get("message", "Taxonomy and synonyms built successfully"),
+                    files_generated=result.get("files", []),
+                    taxonomy_size=result.get("taxonomy_size"),
+                    synonyms_count=result.get("synonyms_count"),
+                    data_scope={
+                        "date_start": request.date_start,
+                        "date_end": request.date_end
+                    }
+                )
+            else:
+                # Handle string response or error case
+                message = str(result) if not isinstance(result, dict) else result.get("message", "Taxonomy build completed")
+                return TaxonomyBuildResponse(
+                    status="success",
+                    message=message,
+                    files_generated=[
+                        "agent/resources/hierarchical_taxonomy_generated.json",
+                        "agent/resources/synonyms_generated.json"
+                    ],
+                    data_scope={
+                        "date_start": request.date_start,
+                        "date_end": request.date_end
+                    }
+                )
+
+        except Exception as e:
+            return TaxonomyBuildResponse(
+                status="error",
+                message=f"Taxonomy build failed: {str(e)}",
+                files_generated=[],
+                data_scope={
+                    "date_start": request.date_start,
+                    "date_end": request.date_end
+                }
+            )
+
+    async def get_processing_logs(self,
+                                 limit: int = 100,
+                                 offset: int = 0,
+                                 level: Optional[str] = None,
+                                 source: Optional[str] = None) -> ProcessingLogsResponse:
+        """Get processing logs with filtering and pagination."""
+        try:
+            import os
+            from pathlib import Path
+            import json
+            from datetime import datetime
+
+            # Check for log files in logs/ directory
+            log_dir = Path("logs")
+            log_entries = []
+
+            if log_dir.exists():
+                # Read JSONL log files
+                for log_file in log_dir.glob("*.jsonl"):
+                    try:
+                        with open(log_file, 'r') as f:
+                            for line in f:
+                                if line.strip():
+                                    try:
+                                        entry = json.loads(line.strip())
+
+                                        # Convert to ProcessingLogEntry format
+                                        log_entry = ProcessingLogEntry(
+                                            timestamp=datetime.fromisoformat(entry.get('timestamp', datetime.now().isoformat())),
+                                            level=entry.get('level', 'INFO'),
+                                            message=entry.get('message', ''),
+                                            source=entry.get('source', log_file.stem),
+                                            context=entry.get('context')
+                                        )
+
+                                        # Apply filters
+                                        if level and log_entry.level != level:
+                                            continue
+                                        if source and log_entry.source != source:
+                                            continue
+
+                                        log_entries.append(log_entry)
+                                    except json.JSONDecodeError:
+                                        continue
+                    except Exception:
+                        continue
+
+            # Sort by timestamp (newest first)
+            log_entries.sort(key=lambda x: x.timestamp, reverse=True)
+
+            # Apply pagination
+            total_count = len(log_entries)
+            paginated_logs = log_entries[offset:offset + limit]
+
+            return ProcessingLogsResponse(
+                logs=paginated_logs,
+                total_count=total_count,
+                page_info=PageInfo(
+                    limit=limit,
+                    offset=offset,
+                    has_next_page=offset + limit < total_count
+                )
+            )
+
+        except Exception as e:
+            # Return empty response on error
+            return ProcessingLogsResponse(
+                logs=[],
+                total_count=0,
+                page_info=PageInfo(
+                    limit=limit,
+                    offset=offset,
+                    has_next_page=False
+                )
+            )
 
 
 class SystemService:
