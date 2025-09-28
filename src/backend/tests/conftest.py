@@ -109,14 +109,17 @@ def _setup_test_data(db):
         )
     ]
     
-    # Insert raw activities
+    # Insert raw activities (use unique details to avoid conflicts)
     raw_activity_ids = []
-    for activity in test_activities:
+    for i, activity in enumerate(test_activities):
         try:
+            # Make details unique by adding timestamp
+            import time
+            activity.details = f"{activity.details} - Test {int(time.time() * 1000)}_{i}"
             activity_id = RawActivityDAO.create(activity)
             raw_activity_ids.append(activity_id)
-        except Exception:
-            # Activity might already exist
+        except Exception as e:
+            # Skip if creation fails
             pass
     
     # Create test tags
@@ -128,14 +131,19 @@ def _setup_test_data(db):
     
     tag_ids = []
     for tag in test_tags:
-        try:
-            tag_id = TagDAO.create(tag)
-            tag_ids.append(tag_id)
-        except Exception:
-            # Tag might already exist
-            existing_tag = TagDAO.get_by_name(tag.name)
-            if existing_tag:
-                tag_ids.append(existing_tag.id)
+        # Check if tag already exists first
+        existing_tag = TagDAO.get_by_name(tag.name)
+        if existing_tag:
+            tag_ids.append(existing_tag.id)
+        else:
+            try:
+                tag_id = TagDAO.create(tag)
+                tag_ids.append(tag_id)
+            except Exception as e:
+                # If it fails, try to get existing tag again
+                existing_tag = TagDAO.get_by_name(tag.name)
+                if existing_tag:
+                    tag_ids.append(existing_tag.id)
     
     # Create test processed activities
     if raw_activity_ids and tag_ids:

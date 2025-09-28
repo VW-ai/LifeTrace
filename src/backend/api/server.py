@@ -183,6 +183,87 @@ def create_app() -> FastAPI:
         """Get all tags with sorting and pagination."""
         return await tag_service.get_tags(sort_by=sort_by, limit=limit, offset=offset)
 
+    @app.get(f"{API_V1_PREFIX}/tags/summary", response_model=TagSummaryResponse)
+    async def get_tag_summary(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        limit: int = Query(default=20, ge=1, le=100),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag usage summary with counts."""
+        return await tag_service.get_tag_summary(
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/cooccurrence", response_model=TagCooccurrenceResponse)
+    async def get_tag_cooccurrence(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        tags: Optional[str] = Query(None, description="Comma-separated tag names to analyze"),
+        threshold: int = Query(default=2, ge=1, le=100),
+        limit: int = Query(default=50, ge=1, le=200),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag co-occurrence analysis."""
+        tag_list = tags.split(',') if tags else None
+        return await tag_service.get_tag_cooccurrence(
+            start_date=start_date,
+            end_date=end_date,
+            tags=tag_list,
+            threshold=threshold,
+            limit=limit
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/transitions", response_model=TagTransitionResponse)
+    async def get_tag_transitions(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        tags: Optional[str] = Query(None, description="Comma-separated tag names to analyze"),
+        limit: int = Query(default=50, ge=1, le=200),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag transition patterns."""
+        tag_list = tags.split(',') if tags else None
+        return await tag_service.get_tag_transitions(
+            start_date=start_date,
+            end_date=end_date,
+            tags=tag_list,
+            limit=limit
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/time-series", response_model=TagTimeSeriesResponse)
+    async def get_tag_time_series(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        tags: Optional[str] = Query(None, description="Comma-separated tag names to analyze"),
+        granularity: str = Query(default="day", pattern=r'^(hour|day)$'),
+        mode: str = Query(default="absolute", pattern=r'^(absolute|normalized|share)$'),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag time series data."""
+        tag_list = tags.split(',') if tags else None
+        return await tag_service.get_tag_time_series(
+            start_date=start_date,
+            end_date=end_date,
+            tags=tag_list,
+            granularity=granularity,
+            mode=mode
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/relationships")
+    async def get_top_tags_relationships(
+        top_tags_limit: int = Query(default=5, ge=1, le=20),
+        related_tags_limit: int = Query(default=5, ge=1, le=10),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get top tags with their co-occurring related tags."""
+        return await tag_service.get_top_tags_with_relationships(
+            top_tags_limit=top_tags_limit,
+            related_tags_limit=related_tags_limit
+        )
+
     @app.post(f"{API_V1_PREFIX}/tags", response_model=TagResponse)
     async def create_tag(
         tag_data: TagCreateRequest,
@@ -224,18 +305,6 @@ def create_app() -> FastAPI:
         if not success:
             raise HTTPException(status_code=404, detail="Tag not found")
         return {"message": "Tag deleted successfully"}
-
-    @app.get(f"{API_V1_PREFIX}/tags/relationships")
-    async def get_top_tags_relationships(
-        top_tags_limit: int = Query(default=5, ge=1, le=20),
-        related_tags_limit: int = Query(default=5, ge=1, le=10),
-        tag_service: TagService = Depends(get_tag_service)
-    ):
-        """Get top tags with their co-occurring related tags."""
-        return await tag_service.get_top_tags_with_relationships(
-            top_tags_limit=top_tags_limit,
-            related_tags_limit=related_tags_limit
-        )
 
     # Processing Endpoints
     @app.post(f"{API_V1_PREFIX}/process/daily", response_model=ProcessingResponse)

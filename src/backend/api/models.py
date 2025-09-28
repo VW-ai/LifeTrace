@@ -128,6 +128,61 @@ class TimeDistributionResponse(BaseModel):
     summary: TimeDistributionSummary
 
 
+# Tag Analysis Models
+class TagSummaryItem(BaseModel):
+    """Individual tag summary."""
+    tag: str
+    count: int
+    percentage: float
+
+
+class TagSummaryResponse(BaseModel):
+    """Tag usage summary response."""
+    total_tags: int
+    top_tags: List[TagSummaryItem]
+    color_map: Dict[str, str]
+
+
+class TagCooccurrenceItem(BaseModel):
+    """Tag co-occurrence relationship."""
+    tag1: str
+    tag2: str
+    strength: float
+    count: int
+
+
+class TagCooccurrenceResponse(BaseModel):
+    """Tag co-occurrence analysis response."""
+    data: List[TagCooccurrenceItem]
+
+
+class TagTransitionItem(BaseModel):
+    """Tag transition pattern."""
+    from_tag: str
+    to_tag: str
+    strength: float
+    count: int
+
+
+class TagTransitionResponse(BaseModel):
+    """Tag transition analysis response."""
+    data: List[TagTransitionItem]
+
+
+class TagTimeSeriesItem(BaseModel):
+    """Tag time series data point."""
+    tag: str
+    date: str
+    hour: Optional[int] = None
+    count: int
+    duration: int  # in minutes
+
+
+class TagTimeSeriesResponse(BaseModel):
+    """Tag time series analysis response."""
+    data: List[TagTimeSeriesItem]
+
+
 # Request Models
 class TagCreateRequest(BaseModel):
     """Request to create a new tag."""

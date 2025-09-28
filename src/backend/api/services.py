@@ -301,141 +301,318 @@ class TagService:
             created_at=tag_db.created_at,
             updated_at=tag_db.updated_at
         )
-    
+
     async def create_tag(self, tag_data: TagCreateRequest) -> TagResponse:
         """Create a new tag."""
-        # Check if tag already exists
-        existing = TagDAO.get_by_name(tag_data.name)
-        if existing:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=409, detail=f"Tag '{tag_data.name}' already exists")
-        
-        # Create new tag
         tag_db = TagDB(
             name=tag_data.name,
             description=tag_data.description,
-            color=tag_data.color,
-            usage_count=0
+            color=tag_data.color
         )
-        
+
         tag_id = TagDAO.create(tag_db)
-        created_tag = TagDAO.get_by_id(tag_id)
-        
-        return TagResponse(
-            id=created_tag.id,
-            name=created_tag.name,
-            description=created_tag.description,
-            color=created_tag.color,
-            usage_count=created_tag.usage_count,
-            created_at=created_tag.created_at,
-            updated_at=created_tag.updated_at
-        )
-    
+        return await self.get_tag_by_id(tag_id)
+
     async def update_tag(self, tag_id: int, tag_data: TagUpdateRequest) -> Optional[TagResponse]:
         """Update an existing tag."""
-        existing = TagDAO.get_by_id(tag_id)
-        if not existing:
+        existing_tag = TagDAO.get_by_id(tag_id)
+        if not existing_tag:
             return None
-        
-        # Check name collision
-        name_check = TagDAO.get_by_name(tag_data.name)
-        if name_check and name_check.id != tag_id:
-            raise ValueError(f"Tag '{tag_data.name}' already exists")
-        
-        # Update tag
-        existing.name = tag_data.name
-        existing.description = tag_data.description
-        existing.color = tag_data.color
-        existing.updated_at = datetime.now()
-        
-        TagDAO.update(existing)
-        updated_tag = TagDAO.get_by_id(tag_id)
-        
-        return TagResponse(
-            id=updated_tag.id,
-            name=updated_tag.name,
-            description=updated_tag.description,
-            color=updated_tag.color,
-            usage_count=updated_tag.usage_count,
-            created_at=updated_tag.created_at,
-            updated_at=updated_tag.updated_at
+
+        updated_tag = TagDB(
+            id=tag_id,
+            name=tag_data.name,
+            description=tag_data.description,
+            color=tag_data.color,
+            usage_count=existing_tag.usage_count,
+            created_at=existing_tag.created_at,
+            updated_at=datetime.now()
         )
-    
+
+        TagDAO.update(updated_tag)
+        return await self.get_tag_by_id(tag_id)
+
     async def delete_tag(self, tag_id: int) -> bool:
         """Delete a tag."""
-        existing = TagDAO.get_by_id(tag_id)
-        if not existing:
+        existing_tag = TagDAO.get_by_id(tag_id)
+        if not existing_tag:
             return False
-        
-        # Delete associated activity_tags first
-        ActivityTagDAO.delete_by_tag_id(tag_id)
-        
-        # Delete the tag
+
         TagDAO.delete(tag_id)
         return True
-    
-    async def get_top_tags_with_relationships(
-        self, 
-        top_tags_limit: int = 5,
-        related_tags_limit: int = 5
-    ) -> List[Dict[str, Any]]:
+
+    async def get_tag_summary(self, start_date: Optional[str] = None,
+                             end_date: Optional[str] = None,
+                             limit: int = 20) -> TagSummaryResponse:
+        """Get tag usage summary."""
+        # Build query with date filters
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa.date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("pa.date <= ?")
+            params.append(end_date)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT t.name as tag,
+                   COUNT(*) as count,
+                   ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+            FROM tags t
+            JOIN activity_tags at ON t.id = at.tag_id
+            JOIN processed_activities pa ON at.processed_activity_id = pa.id
+            {where_clause}
+            GROUP BY t.id, t.name
+            ORDER BY count DESC
+            LIMIT ?
         """
-        Get top tags by usage with their most frequent co-occurring tags.
-        
-        Args:
-            top_tags_limit: Number of top tags to analyze
-            related_tags_limit: Number of related tags per top tag
-            
-        Returns:
-            List of dictionaries containing tag info and relationships
-        """
-        # Get top tags by usage
-        top_tags_query = """
-        SELECT name, usage_count 
-        FROM tags 
-        WHERE usage_count > 0
-        ORDER BY usage_count DESC 
-        LIMIT ?;
-        """
-        
-        top_tags = self.db.execute_query(top_tags_query, [top_tags_limit])
-        
-        results = []
-        for tag in top_tags:
-            tag_name = tag['name']
-            usage_count = tag['usage_count']
-            
-            # Get co-occurring tags for this tag
-            relationships_query = """
-            SELECT 
-                t2.name as related_tag,
-                COUNT(*) as co_occurrence_count
+        params.append(limit)
+
+        results = self.db.execute_query(query, params)
+
+        # Get total count
+        total_query = "SELECT COUNT(DISTINCT id) as count FROM tags"
+        total_result = self.db.execute_query(total_query)
+        total_tags = total_result[0]['count'] if total_result else 0
+
+        # Convert to response format
+        top_tags = []
+        color_map = {}
+
+        for row in results:
+            top_tags.append(TagSummaryItem(
+                tag=row['tag'],
+                count=row['count'],
+                percentage=row['percentage']
+            ))
+
+            # Get color for this tag
+            tag_color_query = "SELECT color FROM tags WHERE name = ?"
+            tag_color_result = self.db.execute_query(tag_color_query, [row['tag']])
+            if tag_color_result:
+                color_map[row['tag']] = tag_color_result[0]['color'] or '#6b7280'
+
+        return TagSummaryResponse(
+            total_tags=total_tags,
+            top_tags=top_tags,
+            color_map=color_map
+        )
+
+    async def get_tag_cooccurrence(self, start_date: Optional[str] = None,
+                                  end_date: Optional[str] = None,
+                                  tags: Optional[List[str]] = None,
+                                  threshold: int = 2,
+                                  limit: int = 50) -> TagCooccurrenceResponse:
+        """Get tag co-occurrence analysis."""
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa.date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("pa.date <= ?")
+            params.append(end_date)
+        if tags:
+            placeholders = ','.join(['?' for _ in tags])
+            conditions.append(f"(t1.name IN ({placeholders}) OR t2.name IN ({placeholders}))")
+            params.extend(tags * 2)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT t1.name as tag1, t2.name as tag2,
+                   COUNT(*) as count,
+                   ROUND(COUNT(*) * 1.0 / MAX(tag_counts.max_count), 3) as strength
             FROM activity_tags at1
             JOIN activity_tags at2 ON at1.processed_activity_id = at2.processed_activity_id
+                                   AND at1.tag_id < at2.tag_id
             JOIN tags t1 ON at1.tag_id = t1.id
             JOIN tags t2 ON at2.tag_id = t2.id
-            WHERE t1.name = ? AND t1.id != t2.id
-            GROUP BY t2.name
-            ORDER BY co_occurrence_count DESC
-            LIMIT ?;
+            JOIN processed_activities pa ON at1.processed_activity_id = pa.id
+            CROSS JOIN (SELECT MAX(cnt) as max_count FROM (
+                SELECT COUNT(*) as cnt
+                FROM activity_tags at3
+                JOIN processed_activities pa3 ON at3.processed_activity_id = pa3.id
+                {where_clause.replace('pa.', 'pa3.')}
+                GROUP BY at3.tag_id
+            )) tag_counts
+            {where_clause}
+            GROUP BY t1.id, t1.name, t2.id, t2.name
+            HAVING count >= ?
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        params.extend([threshold, limit])
+
+        results = self.db.execute_query(query, params)
+
+        data = []
+        for row in results:
+            data.append(TagCooccurrenceItem(
+                tag1=row['tag1'],
+                tag2=row['tag2'],
+                strength=row['strength'],
+                count=row['count']
+            ))
+
+        return TagCooccurrenceResponse(data=data)
+
+    async def get_tag_transitions(self, start_date: Optional[str] = None,
+                                 end_date: Optional[str] = None,
+                                 tags: Optional[List[str]] = None,
+                                 limit: int = 50) -> TagTransitionResponse:
+        """Get tag transition patterns."""
+        # This is a simplified implementation - in a real system you'd analyze temporal sequences
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa1.date >= ? AND pa2.date >= ?")
+            params.extend([start_date, start_date])
+        if end_date:
+            conditions.append("pa1.date <= ? AND pa2.date <= ?")
+            params.extend([end_date, end_date])
+        if tags:
+            placeholders = ','.join(['?' for _ in tags])
+            conditions.append(f"(t1.name IN ({placeholders}) OR t2.name IN ({placeholders}))")
+            params.extend(tags * 2)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT t1.name as from_tag, t2.name as to_tag,
+                   COUNT(*) as count,
+                   ROUND(COUNT(*) * 1.0 / SUM(COUNT(*)) OVER(), 3) as strength
+            FROM processed_activities pa1
+            JOIN activity_tags at1 ON pa1.id = at1.processed_activity_id
+            JOIN tags t1 ON at1.tag_id = t1.id
+            JOIN processed_activities pa2 ON DATE(pa2.date) = DATE(pa1.date, '+1 day')
+            JOIN activity_tags at2 ON pa2.id = at2.processed_activity_id
+            JOIN tags t2 ON at2.tag_id = t2.id
+            {where_clause}
+            GROUP BY t1.id, t1.name, t2.id, t2.name
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        results = self.db.execute_query(query, params)
+
+        data = []
+        for row in results:
+            data.append(TagTransitionItem(
+                from_tag=row['from_tag'],
+                to_tag=row['to_tag'],
+                strength=row['strength'],
+                count=row['count']
+            ))
+
+        return TagTransitionResponse(data=data)
+
+    async def get_tag_time_series(self, start_date: Optional[str] = None,
+                                 end_date: Optional[str] = None,
+                                 tags: Optional[List[str]] = None,
+                                 granularity: str = "day",
+                                 mode: str = "absolute") -> TagTimeSeriesResponse:
+        """Get tag time series data."""
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa.date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("pa.date <= ?")
+            params.append(end_date)
+        if tags:
+            placeholders = ','.join(['?' for _ in tags])
+            conditions.append(f"t.name IN ({placeholders})")
+            params.extend(tags)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        # Determine time grouping based on granularity
+        if granularity == "hour":
+            time_group = "pa.date, CAST(strftime('%H', pa.time) as INTEGER)"
+            time_select = "pa.date, CAST(strftime('%H', pa.time) as INTEGER) as hour"
+        else:
+            time_group = "pa.date"
+            time_select = "pa.date, NULL as hour"
+
+        query = f"""
+            SELECT t.name as tag, {time_select},
+                   COUNT(*) as count,
+                   SUM(pa.total_duration_minutes) as duration
+            FROM tags t
+            JOIN activity_tags at ON t.id = at.tag_id
+            JOIN processed_activities pa ON at.processed_activity_id = pa.id
+            {where_clause}
+            GROUP BY t.id, t.name, {time_group}
+            ORDER BY pa.date, t.name
+        """
+
+        results = self.db.execute_query(query, params)
+
+        data = []
+        for row in results:
+            data.append(TagTimeSeriesItem(
+                tag=row['tag'],
+                date=row['date'],
+                hour=row['hour'],
+                count=row['count'],
+                duration=row['duration'] or 0
+            ))
+
+        return TagTimeSeriesResponse(data=data)
+
+    async def get_top_tags_with_relationships(self, top_tags_limit: int = 5,
+                                            related_tags_limit: int = 5):
+        """Get top tags with their co-occurring related tags."""
+        # Get top tags by usage
+        top_tags_query = """
+            SELECT t.name, t.usage_count
+            FROM tags t
+            ORDER BY t.usage_count DESC
+            LIMIT ?
+        """
+        top_tags_result = self.db.execute_query(top_tags_query, [top_tags_limit])
+
+        relationships = {}
+        for tag_row in top_tags_result:
+            tag_name = tag_row['name']
+
+            # Get related tags for this tag
+            related_query = """
+                SELECT t2.name as related_tag, COUNT(*) as cooccurrence_count
+                FROM activity_tags at1
+                JOIN activity_tags at2 ON at1.processed_activity_id = at2.processed_activity_id
+                                       AND at1.tag_id != at2.tag_id
+                JOIN tags t1 ON at1.tag_id = t1.id
+                JOIN tags t2 ON at2.tag_id = t2.id
+                WHERE t1.name = ?
+                GROUP BY t2.id, t2.name
+                ORDER BY cooccurrence_count DESC
+                LIMIT ?
             """
-            
-            relationships = self.db.execute_query(
-                relationships_query, 
-                [tag_name, related_tags_limit]
-            )
-            
-            # Convert usage count to rough time estimation
-            estimated_hours = max(1, int(usage_count * 0.5))
-            
-            results.append({
-                'name': tag_name.replace('_', ' ').title(),
-                'time': f"{estimated_hours}hr 0mins",
-                'usage_count': usage_count,
-                'keywords': [rel['related_tag'] for rel in relationships]
-            })
-        
-        return results
+            related_result = self.db.execute_query(related_query, [tag_name, related_tags_limit])
+
+            relationships[tag_name] = {
+                'usage_count': tag_row['usage_count'],
+                'related_tags': [
+                    {
+                        'tag': row['related_tag'],
+                        'cooccurrence_count': row['cooccurrence_count']
+                    }
+                    for row in related_result
+                ]
+            }
+
+        return relationships
 
 
 class InsightsService:

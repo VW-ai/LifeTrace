@@ -1,3 +1,8 @@
+# Web API
+fastapi==0.115.4
+uvicorn==0.30.6
+pydantic==2.9.2
+
 anyio==4.10.0
 cachetools==5.5.2
 certifi==2025.8.3

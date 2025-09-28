@@ -7,6 +7,19 @@ We follow an append-only strategy in the writing of thie file.
 ---
 ### Next Steps (as of 2025-09-26) - CURRENT PRIORITIES
 
+- [HIGH] **Backend Testing Infrastructure**
+  - Fix pytest database concurrency issues causing disk I/O errors during test runs
+  - Implement proper test isolation to prevent database conflicts between parallel tests
+  - Update conftest.py to use in-memory databases or better connection management
+  - Ensure comprehensive backend unit tests run reliably for CI/CD integration
+
+- [HIGH] **Frontend Code Quality & Linting**
+  - Fix ESLint errors: remove unused variables (patterns, eventRects, ChordData, error params)
+  - Replace @typescript-eslint/no-explicit-any with proper type definitions
+  - Fix React hooks exhaustive-deps warning in useEffect
+  - Escape unescaped quotes in JSX with proper HTML entities
+  - Remove empty interface extending supertype in input.tsx
+
 - [HIGH] **Frontend Polish & Professional Design**
   - Fix TopTagsList styling issues - keywords running together without spaces, missing proper styling classes
   - Apply professional design system consistently across all components (remove Dadaist experimental patterns)

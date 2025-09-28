@@ -4,15 +4,30 @@ A modern, industry-ready platform for processing and analyzing activity data fro
 
 ## 🚀 Quick Start
 
+Setup once:
 ```bash
-# Start development environment
-./runner/deploy.sh local
+# Backend deps
+python -m venv venv && source venv/bin/activate
+pip install -r src/backend/requirements.txt
 
-# Or start with Docker
-./runner/deploy.sh docker
+# Frontend deps
+cd src/frontend && npm ci && cd -
 ```
 
-Access your dashboard at: `http://localhost:5174`
+Environment:
+- Backend dev env file: `src/backend/.env.development` (provided). Adjust `CORS_ORIGINS` if needed.
+
+Run:
+```bash
+# Unified dev servers (backend + frontend)
+./runner/deploy.sh local
+
+# Or start individually
+python src/backend/start.py development
+cd src/frontend && npm run dev
+```
+
+Access the app at: `http://localhost:3000`
 
 ## 📁 Project Structure
 
@@ -41,7 +56,7 @@ smartHistory/
 │
 ├── src/                # Source code
 │   ├── backend/        # FastAPI backend
-│   └── frontend/       # React frontend
+│   └── frontend/       # Next.js frontend
 │
 ├── tests/              # Test suites
 ├── test_features/      # Feature tests
@@ -50,17 +65,15 @@ smartHistory/
 ├── token.json         # Authentication tokens
 ├── smarthistory.db    # SQLite database
 ├── pytest.ini        # Test configuration
-└── requirements-api.txt # Python dependencies
+└── src/backend/requirements.txt # Backend Python dependencies
 ```
 
 ## 🏃‍♂️ Runner Scripts
 
 ### `./runner/deploy.sh`
-Unified deployment script supporting multiple environments:
-- `local` - Start development servers
-- `docker` - Docker Compose deployment
-- `production` - Production deployment
-- `aws` - AWS ECS deployment
+Unified helpers:
+- `local` - Start development servers (backend + frontend)
+- `docker` - Docker Compose (dev/single-host)
 
 ### `./runner/run_api.py`
 Standalone API server runner with database setup.
@@ -115,14 +128,10 @@ All project documentation is organized in the `META/` directory:
 - **API_QUICKSTART.md** - API usage guide
 - **DEPLOYMENT.md** - Detailed deployment instructions
 
-## 🐳 Deployment (deployment/)
+## 🐳 Deployment
 
-Industry-ready deployment configurations:
-
-- **Docker containers** with multi-stage builds
-- **Kubernetes** manifests for orchestration
-- **Cloud provider** specific configurations (AWS, GCP, Azure)
-- **CI/CD pipelines** for automated deployment
+- Local dev and Docker Compose: see `deployment/DEPLOYMENT.md`.
+- GitHub Pages for frontend-only hosting is supported (static export). See `deployment/DEPLOYMENT.md`.
 
 ## ⚙️ Configuration Files (Root)
 
@@ -144,11 +153,10 @@ Core configuration files remain in the root:
 
 ## 🏗️ Architecture
 
-- **Backend**: FastAPI with dynamic configuration
-- **Frontend**: React + TypeScript + Vite
-- **Database**: SQLite (dev) / PostgreSQL (prod)
-- **Deployment**: Docker + Kubernetes ready
-- **Monitoring**: Prometheus + Grafana integration
+- Backend: FastAPI with environment-based config
+- Frontend: Next.js + TypeScript + Tailwind
+- Database: SQLite for development
+- Deployment: Local/dev Docker Compose; static frontend export to GH Pages
 
 ### Calendar-as-Query → Notion-as-Context (Tagging Flow)
 - Ingest Notion workspace into DB: `notion_pages`, `notion_blocks` (tree, text, is_leaf), `notion_block_edits`

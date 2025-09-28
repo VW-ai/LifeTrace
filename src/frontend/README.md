@@ -1,69 +1,156 @@
-# React + TypeScript + Vite
+# Time Insights Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive tag-driven activity visualization dashboard built with Next.js, TypeScript, and D3.js. This frontend implements Phase 1 (P1) of the Frontend Update Plan, providing a solid foundation for time tracking and activity analysis.
 
-Currently, two official plugins are available:
+## Features Implemented (Phase 1)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### ✅ Core Infrastructure
+- **API Client**: Complete FastAPI integration with type-safe endpoints
+- **Global State Management**: Zustand-based state with URL synchronization
+- **Design System**: Consistent tokens, colors, and components using shadcn/ui
 
-## Expanding the ESLint configuration
+### ✅ Timeline Visualization
+- **Interactive Timeline**: D3.js-powered timeline with brushing for time range selection
+- **Event Visualization**: Color-coded events by tags with hover tooltips
+- **Multi-source Support**: Lane-based layout for different data sources
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### ✅ Filtering & Search
+- **Advanced Filter Bar**: Search, time period selection, tag/source filtering
+- **Active Filter Display**: Visual chips showing current filters with quick removal
+- **Cross-filtering**: Click any element to filter across views
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### ✅ Tag Management
+- **Tag Frequency Cards**: Top tags with usage statistics and color coding
+- **Stable Color System**: HSL-based color generation for consistent tag colors
+- **Interactive Selection**: Click tags to add/remove from filters
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### ✅ Event Details
+- **Event Drawer**: Detailed view with metadata, tags, and related events
+- **Related Events**: Smart suggestions based on tags and sources
+- **Quick Actions**: Filter by tags, copy details, navigate between events
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### ✅ URL State & Sharing
+- **URL Synchronization**: All filters and views reflected in shareable URLs
+- **Share Button**: Generate shareable links for current dashboard state
+- **Browser Navigation**: Back/forward support with state preservation
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Tech Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript with strict type checking
+- **Styling**: Tailwind CSS v4 with custom design tokens
+- **UI Components**: shadcn/ui with Radix UI primitives
+- **Visualization**: D3.js for interactive charts and timeline
+- **State Management**: Zustand with URL synchronization
+- **Icons**: Lucide React
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Project Structure
+
+\`\`\`
+├── app/
+│   ├── layout.tsx          # Root layout with fonts and providers
+│   ├── page.tsx            # Main dashboard page
+│   └── globals.css         # Global styles and design tokens
+├── components/
+│   ├── dashboard/          # Dashboard-specific components
+│   ├── events/             # Event drawer and related components
+│   ├── filters/            # Filter bar and controls
+│   ├── timeline/           # Timeline and tag frequency components
+│   ├── providers/          # React providers (URL sync)
+│   └── ui/                 # Reusable UI components (shadcn/ui)
+├── lib/
+│   ├── store/              # Zustand state management
+│   ├── utils/              # Utility functions (colors, dates)
+│   ├── api-client.ts       # FastAPI client with type safety
+│   └── types.ts            # TypeScript type definitions
+└── hooks/
+    └── use-url-sync.ts     # URL synchronization hook
+\`\`\`
+
+## API Integration
+
+The dashboard is designed to work with a FastAPI backend providing these endpoints:
+
+- `GET /api/v1/activities/raw` - Raw activity data
+- `GET /api/v1/activities/processed` - Processed activities with tags
+- `GET /api/v1/insights/overview` - Activity insights and statistics
+- `GET /api/v1/insights/time-distribution` - Time-based activity distribution
+- `GET /api/v1/tags` - Available tags
+- `GET /api/v1/tags/summary` - Tag usage statistics
+- `GET /api/v1/tags/cooccurrence` - Tag co-occurrence data
+- `GET /api/v1/tags/transitions` - Tag transition patterns
+- `GET /api/v1/tags/time-series` - Time-series tag data
+
+## Getting Started
+
+1. **Install Dependencies**
+   \`\`\`bash
+   npm install
+   \`\`\`
+
+2. **Set Environment Variables**
+   \`\`\`bash
+   # .env.local
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   \`\`\`
+
+3. **Run Development Server**
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+
+4. **Open Dashboard**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## Design System
+
+### Color Tokens
+- **Background**: Main app background
+- **Surface**: Card and panel backgrounds (3 levels)
+- **Text**: Primary, secondary, and muted text colors
+- **Accent**: Interactive elements and highlights
+- **Tag Colors**: Stable HSL-based colors for consistent tag visualization
+
+### Typography
+- **Font**: Inter for UI, IBM Plex for data
+- **Scale**: 12/14/16/20/24/28/36px with 1.4-1.6 line heights
+- **Tabular Numbers**: For timeline and numeric data
+
+### Spacing & Layout
+- **Base Unit**: 8px spacing system
+- **Container**: 1200-1440px max width with responsive breakpoints
+- **Grid**: CSS Grid for dashboard layout, Flexbox for components
+
+## Accessibility Features
+
+- **Keyboard Navigation**: Full keyboard support for all interactions
+- **Screen Reader**: ARIA labels and semantic HTML structure
+- **Color Contrast**: AA compliance for all text and essential elements
+- **Reduced Motion**: Respects `prefers-reduced-motion` setting
+
+## Performance Optimizations
+
+- **Server-Side Aggregation**: Prefers backend data processing
+- **Client-Side Caching**: IndexedDB for API response caching
+- **Virtualization**: Large lists use react-virtual
+- **Optimistic Updates**: Immediate UI feedback for interactions
+
+## Future Phases
+
+This implementation covers Phase 1 (P1) of the Frontend Update Plan. Future phases will add:
+
+- **Phase 2**: Galaxy view with WebGL force graphs
+- **Phase 3**: River streamgraph and calendar heatmap
+- **Phase 4**: Chord diagrams and story saving
+- **Phase 5**: Polish, accessibility audit, and performance tuning
+
+## Contributing
+
+The codebase follows the Frontend Update Plan specifications:
+- Backend-first data approach
+- Atomic component design
+- Comprehensive TypeScript typing
+- Accessibility-first development
+- Performance-conscious implementation
+
+For questions or contributions, refer to the Frontend Update Plan document for detailed specifications and implementation guidelines.
