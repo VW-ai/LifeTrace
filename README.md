@@ -1,6 +1,16 @@
 # SmartHistory - AI-Powered Activity Analytics Platform
 
-> Transform your calendar and notes into beautiful, interactive visualizations with AI-powered insights.
+> The other day I saw a post like this:
+  ```
+  How I spent my past year
+  study econ: 500 hrs
+  reading novels: 100 hrs
+  working out: 100 hrs
+  ...
+  ```
+  I thought, I can build something that help me understand where did my time go!
+  Notion and Calendar provide a great amount of high-quality data for me to build the time-backtracking app---I uses Notion for almost everything, and I log every single activity I planned/encounter on Google Calendar.
+  And here we are! 
 
 ## ✨ See It In Action
 
