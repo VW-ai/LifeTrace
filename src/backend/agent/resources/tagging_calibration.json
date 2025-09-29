@@ -1,0 +1,36 @@
+{
+  "threshold": 0.5,
+  "max_tags": 10,
+  "weights": {
+    "synonym_match": 1.0,
+    "taxonomy_match": 1.2,
+    "title_bonus": 0.3,
+    "duration_scale": 0.001
+  },
+  "downweight": {
+    "work": 0.5
+  },
+  "synonyms": {
+    "development": ["code", "coding", "program", "debug", "develop", "python", "javascript", "refactor"],
+    "meeting": ["meeting", "call", "standup", "sync", "presentation"],
+    "meals": ["lunch", "dinner", "breakfast", "meal", "snack", "吃饭"],
+    "exercise": ["workout", "run", "gym", "swim", "yoga", "walk"],
+    "study": ["study", "learn", "reading", "research"],
+    "planning": ["plan", "planning", "schedule", "retro", "roadmap"],
+    "writing": ["write", "writing", "document", "docs", "note", "diary", "文档"],
+    "communication": ["email", "message", "chat", "discussion"],
+    "admin": ["invoice", "expense", "tax", "paperwork"],
+    "maintenance": ["clean", "fix", "repair", "setup", "install"],
+    "social": ["friend", "friends", "family", "dinner out", "party"],
+    "health": ["doctor", "dentist", "clinic", "meds"]
+  },
+  "taxonomy": {
+    "work": ["development", "meeting", "planning", "writing", "communication", "admin"],
+    "personal": ["meals", "social", "hobby", "maintenance", "health"]
+  },
+  "source_bias": {
+    "google_calendar": { "meeting": 0.2, "planning": 0.1 },
+    "notion": { "writing": 0.2, "study": 0.2 }
+  }
+}
+

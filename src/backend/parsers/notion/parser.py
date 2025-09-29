@@ -1,3 +1,13 @@
+"""
+DEPRECATED: Legacy Notion Parser
+
+⚠️  WARNING: This file is deprecated and will be removed in a future version.
+⚠️  MIGRATION: Use `src/backend/parsers/notion/incremental_ingest.py` instead.
+⚠️  REASON: File-based JSON parsing superseded by direct API ingestion with batching and retry logic.
+
+Legacy file-based parser functionality for Notion content.
+"""
+
 import json
 from datetime import datetime, timedelta, timezone
 

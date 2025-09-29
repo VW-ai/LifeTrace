@@ -1,1 +1,0 @@
-export { ProfessionalButton } from './ProfessionalButton';

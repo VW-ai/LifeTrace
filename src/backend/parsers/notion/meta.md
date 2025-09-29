@@ -1,6 +1,15 @@
 # Notion Parser (`notion_parser.py`)
 
-## Purpose
+⚠️ **DEPRECATED - DO NOT USE**
+
+**Migration Path**: Use `incremental_ingest.py` for direct database ingestion with batching
+**Removal Timeline**: Target removal after documentation updates complete
+**Status**: Superseded by database-first architecture with retry logic
+**Replacement**: `src/backend/parsers/notion/incremental_ingest.py`
+
+---
+
+## Purpose (Legacy)
 This script is a component of the SmartHistory project's backend. Its sole purpose is to parse the raw, nested JSON data fetched from the Notion API (`notion_content.json`) and transform it into a clean, structured, and "flattened" format that is easy for the AI agent to process.
 
 ## Core Logic

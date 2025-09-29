@@ -128,6 +128,67 @@ BEGIN
     UPDATE raw_activities SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
 
+-- =========================================
+-- Notion storage: pages, blocks, edits, embeddings
+-- =========================================
+
+-- Pages table (unique Notion pages)
+CREATE TABLE IF NOT EXISTS notion_pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id TEXT NOT NULL UNIQUE,
+    title TEXT DEFAULT '',
+    url TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_edited_at DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_notion_pages_page_id ON notion_pages(page_id);
+CREATE INDEX IF NOT EXISTS idx_notion_pages_last_edited ON notion_pages(last_edited_at);
+
+-- Blocks table (parent/child relationships preserved)
+CREATE TABLE IF NOT EXISTS notion_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    block_id TEXT NOT NULL UNIQUE,
+    page_id TEXT NOT NULL,
+    parent_block_id TEXT,
+    is_leaf INTEGER DEFAULT 0, -- 1 if leaf
+    text TEXT DEFAULT '',
+    abstract TEXT,             -- 30–100 word generated abstract
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_edited_at DATETIME,
+    FOREIGN KEY (page_id) REFERENCES notion_pages(page_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notion_blocks_block_id ON notion_blocks(block_id);
+CREATE INDEX IF NOT EXISTS idx_notion_blocks_page_id ON notion_blocks(page_id);
+CREATE INDEX IF NOT EXISTS idx_notion_blocks_parent ON notion_blocks(parent_block_id);
+CREATE INDEX IF NOT EXISTS idx_notion_blocks_last_edited ON notion_blocks(last_edited_at);
+
+-- Edited tracking for daily edited-tree
+CREATE TABLE IF NOT EXISTS notion_block_edits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    block_id TEXT NOT NULL,
+    edited_at DATETIME NOT NULL,
+    FOREIGN KEY (block_id) REFERENCES notion_blocks(block_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notion_block_edits_block_id ON notion_block_edits(block_id);
+CREATE INDEX IF NOT EXISTS idx_notion_block_edits_edited_at ON notion_block_edits(edited_at);
+
+-- Embeddings for leaf abstracts (store as JSON until vector ext)
+CREATE TABLE IF NOT EXISTS notion_embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    block_id TEXT NOT NULL,
+    model TEXT DEFAULT '',
+    vector TEXT NOT NULL, -- JSON array of floats
+    dim INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (block_id) REFERENCES notion_blocks(block_id) ON DELETE CASCADE,
+    UNIQUE(block_id, model)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notion_embeddings_block_id ON notion_embeddings(block_id);
+
 CREATE TRIGGER IF NOT EXISTS update_processed_activities_timestamp
 AFTER UPDATE ON processed_activities  
 BEGIN

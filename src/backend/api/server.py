@@ -183,6 +183,87 @@ def create_app() -> FastAPI:
         """Get all tags with sorting and pagination."""
         return await tag_service.get_tags(sort_by=sort_by, limit=limit, offset=offset)
 
+    @app.get(f"{API_V1_PREFIX}/tags/summary", response_model=TagSummaryResponse)
+    async def get_tag_summary(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        limit: int = Query(default=20, ge=1, le=100),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag usage summary with counts."""
+        return await tag_service.get_tag_summary(
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/cooccurrence", response_model=TagCooccurrenceResponse)
+    async def get_tag_cooccurrence(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        tags: Optional[str] = Query(None, description="Comma-separated tag names to analyze"),
+        threshold: int = Query(default=2, ge=1, le=100),
+        limit: int = Query(default=50, ge=1, le=200),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag co-occurrence analysis."""
+        tag_list = tags.split(',') if tags else None
+        return await tag_service.get_tag_cooccurrence(
+            start_date=start_date,
+            end_date=end_date,
+            tags=tag_list,
+            threshold=threshold,
+            limit=limit
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/transitions", response_model=TagTransitionResponse)
+    async def get_tag_transitions(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        tags: Optional[str] = Query(None, description="Comma-separated tag names to analyze"),
+        limit: int = Query(default=50, ge=1, le=200),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag transition patterns."""
+        tag_list = tags.split(',') if tags else None
+        return await tag_service.get_tag_transitions(
+            start_date=start_date,
+            end_date=end_date,
+            tags=tag_list,
+            limit=limit
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/time-series", response_model=TagTimeSeriesResponse)
+    async def get_tag_time_series(
+        start_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        end_date: Optional[str] = Query(None, pattern=r'^\d{4}-\d{2}-\d{2}$'),
+        tags: Optional[str] = Query(None, description="Comma-separated tag names to analyze"),
+        granularity: str = Query(default="day", pattern=r'^(hour|day)$'),
+        mode: str = Query(default="absolute", pattern=r'^(absolute|normalized|share)$'),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get tag time series data."""
+        tag_list = tags.split(',') if tags else None
+        return await tag_service.get_tag_time_series(
+            start_date=start_date,
+            end_date=end_date,
+            tags=tag_list,
+            granularity=granularity,
+            mode=mode
+        )
+
+    @app.get(f"{API_V1_PREFIX}/tags/relationships")
+    async def get_top_tags_relationships(
+        top_tags_limit: int = Query(default=5, ge=1, le=20),
+        related_tags_limit: int = Query(default=5, ge=1, le=10),
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Get top tags with their co-occurring related tags."""
+        return await tag_service.get_top_tags_with_relationships(
+            top_tags_limit=top_tags_limit,
+            related_tags_limit=related_tags_limit
+        )
+
     @app.post(f"{API_V1_PREFIX}/tags", response_model=TagResponse)
     async def create_tag(
         tag_data: TagCreateRequest,
@@ -277,6 +358,66 @@ def create_app() -> FastAPI:
         """Get status of data imports."""
         return await processing_service.get_import_status()
 
+    # Backfill endpoint
+    @app.post(f"{API_V1_PREFIX}/management/backfill-calendar")
+    async def backfill_calendar(
+        months: int = Query(default=7, ge=1, le=24),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Backfill last N months of calendar events."""
+        return await processing_service.backfill_calendar(months=months)
+
+    @app.post(f"{API_V1_PREFIX}/management/index-notion")
+    async def index_notion(
+        scope: str = Query(default='all', pattern=r'^(all|recent)$'),
+        hours: int = Query(default=24, ge=1, le=2160),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Generate abstracts + embeddings for Notion blocks (all or recent)."""
+        return await processing_service.index_notion_blocks(scope=scope, hours=hours)
+
+    @app.post(f"{API_V1_PREFIX}/management/reprocess-range")
+    async def reprocess_range(
+        date_start: str = Query(..., pattern=r'^\\d{4}-\\d{2}-\\d{2}$'),
+        date_end: str = Query(..., pattern=r'^\\d{4}-\\d{2}-\\d{2}$'),
+        regenerate_system_tags: bool = Query(default=False),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Purge processed activities in date range and reprocess that window."""
+        return await processing_service.reprocess_date_range(
+            date_start=date_start, date_end=date_end, regenerate_system_tags=regenerate_system_tags
+        )
+
+    # Tag Management Endpoints
+    @app.post(f"{API_V1_PREFIX}/tags/cleanup", response_model=TagCleanupResponse)
+    async def cleanup_tags(
+        request: TagCleanupRequest,
+        tag_service: TagService = Depends(get_tag_service)
+    ):
+        """Clean up meaningless tags using AI analysis."""
+        return await tag_service.cleanup_tags(request)
+
+    @app.post(f"{API_V1_PREFIX}/taxonomy/build", response_model=TaxonomyBuildResponse)
+    async def build_taxonomy(
+        request: TaxonomyBuildRequest,
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Build AI-generated tag taxonomy and synonyms."""
+        return await processing_service.build_taxonomy(request)
+
+    @app.get(f"{API_V1_PREFIX}/processing/logs", response_model=ProcessingLogsResponse)
+    async def get_processing_logs(
+        limit: int = Query(default=100, ge=1, le=1000),
+        offset: int = Query(default=0, ge=0),
+        level: Optional[str] = Query(None, pattern=r'^(DEBUG|INFO|WARN|ERROR)$'),
+        source: Optional[str] = Query(None, description="Filter by log source"),
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Get processing logs with filtering and pagination."""
+        return await processing_service.get_processing_logs(
+            limit=limit, offset=offset, level=level, source=source
+        )
+
     # System Endpoints
     @app.get(f"{API_V1_PREFIX}/system/health", response_model=SystemHealthResponse)
     async def get_system_health(
@@ -291,6 +432,28 @@ def create_app() -> FastAPI:
     ):
         """Get system statistics."""
         return await system_service.get_system_stats()
+
+    # Retrieval endpoints
+    @app.get(f"{API_V1_PREFIX}/retrieval/notion-context")
+    async def retrieval_notion_context(
+        query: str = Query(..., min_length=2),
+        hours: int = Query(default=24, ge=1, le=2160),
+        k: int = Query(default=5, ge=1, le=50),
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Retrieve top-K Notion contexts for a query within recent hours."""
+        return await system_service.get_notion_context(query=query, hours=hours, k=k)
+
+    @app.get(f"{API_V1_PREFIX}/retrieval/notion-context-by-date")
+    async def retrieval_notion_context_by_date(
+        query: str = Query(..., min_length=2),
+        date: str = Query(..., pattern=r'^\\d{4}-\\d{2}-\\d{2}$'),
+        windowDays: int = Query(default=1, ge=0, le=7),
+        k: int = Query(default=5, ge=1, le=50),
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Retrieve top-K Notion contexts around the specified date."""
+        return await system_service.get_notion_context_by_date(query=query, date=date, window_days=windowDays, k=k)
 
     return app
 

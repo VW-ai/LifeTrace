@@ -312,11 +312,7 @@ class RawActivityDAO:
         )
         
         db = get_db_manager()
-        db.execute_update(query, params)
-        
-        # Get the last inserted ID
-        result = db.execute_query("SELECT last_insert_rowid() as id")
-        return result[0]['id']
+        return db.execute_insert(query, params)
     
     @staticmethod
     def get_by_id(activity_id: int) -> Optional[RawActivityDB]:
@@ -442,10 +438,7 @@ class ProcessedActivityDAO:
         )
         
         db = get_db_manager()
-        db.execute_update(query, params)
-        
-        result = db.execute_query("SELECT last_insert_rowid() as id")
-        return result[0]['id']
+        return db.execute_insert(query, params)
     
     @staticmethod
     def get_by_id(activity_id: int) -> Optional[ProcessedActivityDB]:
@@ -570,9 +563,7 @@ class TagDAO:
         
         db = get_db_manager()
         try:
-            db.execute_update(query, params)
-            result = db.execute_query("SELECT last_insert_rowid() as id")
-            return result[0]['id']
+            return db.execute_insert(query, params)
         except DatabaseOperationError as e:
             if "UNIQUE constraint failed" in str(e):
                 raise ValueError(f"Tag '{tag.name}' already exists")
@@ -683,9 +674,7 @@ class ActivityTagDAO:
         
         db = get_db_manager()
         try:
-            db.execute_update(query, params)
-            result = db.execute_query("SELECT last_insert_rowid() as id")
-            return result[0]['id']
+            return db.execute_insert(query, params)
         except DatabaseOperationError as e:
             if "UNIQUE constraint failed" in str(e):
                 raise ValueError("Activity-tag relationship already exists")
@@ -810,10 +799,7 @@ class UserSessionDAO:
         )
         
         db = get_db_manager()
-        db.execute_update(query, params)
-        
-        result = db.execute_query("SELECT last_insert_rowid() as id")
-        return result[0]['id']
+        return db.execute_insert(query, params)
     
     @staticmethod
     def update_status(session_id: int, status: SessionStatus, 

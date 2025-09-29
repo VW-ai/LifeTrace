@@ -59,7 +59,7 @@ deploy_local() {
     
     log_success "SmartHistory deployed locally!"
     log_info "Backend: http://localhost:8000"
-    log_info "Frontend: http://localhost:5173"
+    log_info "Frontend: http://localhost:3000"
     log_info "API Docs: http://localhost:8000/docs"
     
     # Wait for Ctrl+C

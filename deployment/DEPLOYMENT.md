@@ -1,181 +1,101 @@
-# SmartHistory - Industry-Ready Deployment Guide
+# SmartHistory Deployment Guide (Current Stage)
 
-SmartHistory now features a modern, scalable architecture with dynamic configuration and multi-environment deployment support.
+This guide focuses on what is implemented and practical now:
+- Local development for backend (FastAPI) and frontend (Next.js)
+- Docker Compose for a simple containerized run
+- Static hosting of the frontend on GitHub Pages (project site)
 
-## 🏗️ Architecture Overview
+Cloud/Kubernetes stacks and advanced monitoring are out of scope here until we wire them up end-to-end.
 
-### Backend (FastAPI)
-- **Dynamic Configuration**: Environment-based settings with fallbacks
-- **Multi-environment Support**: Development, staging, production configs
-- **Industry Security**: CORS, trusted hosts, request logging
-- **Health Checks**: Built-in monitoring endpoints
-- **Containerization**: Docker-ready with multi-stage builds
+## Prerequisites
+- Python 3.10+
+- Node.js 18+ and npm
+- SQLite for local dev (file is created automatically)
+- Docker + Docker Compose (optional, for containerized run)
 
-### Frontend (React + TypeScript + Vite)
-- **Environment Detection**: Automatic API URL resolution
-- **Enhanced Error Handling**: Request logging and user-friendly errors
-- **Professional UI**: Styled-components with responsive design
-- **Development Tools**: Hot reload, debugging features
+## Local Development
 
-## 🚀 Quick Start
+- Unified script: `./runner/deploy.sh local`
+  - Starts FastAPI backend on `http://localhost:8000`
+  - Starts Next.js frontend on `http://localhost:5173`
 
-### Local Development
-```bash
-# Start both services
-./deploy.sh local
+Manual start:
+- Backend: `cd src/backend && python start.py development`
+- Frontend: `cd src/frontend && npm run dev`
 
-# Or start individually:
-# Backend: cd src/backend && python start.py development
-# Frontend: cd src/frontend && npm run dev
+Environment variables for backend (example `.env.development` in `src/backend`):
 ```
-
-### Docker Deployment
-```bash
-# Development with Docker
-./deploy.sh docker
-
-# Production deployment
-./deploy.sh production
-```
-
-### Cloud Deployment
-```bash
-# AWS deployment (requires AWS CLI setup)
-./deploy.sh aws
-```
-
-## 🔧 Configuration
-
-### Backend Configuration
-Environment variables are loaded from `.env.{environment}` files:
-
-```bash
-# .env.development
 ENVIRONMENT=development
 DEBUG=true
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174
+CORS_ORIGINS=http://localhost:5173
 DATABASE_URL=sqlite:///./smarthistory_dev.db
 LOG_LEVEL=DEBUG
 ```
 
-### Frontend Configuration
-Automatic environment detection with fallbacks:
-- **Development**: `http://localhost:8000/api/v1`
-- **Production**: `https://yourdomain.com/api/v1`
-- **Custom**: Set `VITE_API_BASE_URL` environment variable
+## Docker Compose (Dev/Single-host)
 
-## 📊 Monitoring & Observability
+Files:
+- `deployment/docker-compose.yml` (dev)
+- `deployment/docker-compose.prod.yml` (single-host prod-like)
 
-### Health Checks
-- Backend: `GET /health`
-- System status: `GET /api/v1/system/health`
-- Metrics: `GET /api/v1/system/stats`
-
-### Logging
-- Structured logging with request IDs
-- Environment-specific log levels
-- Request/response correlation
-
-### Docker Health Checks
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+Commands:
+```
+cd deployment
+docker compose up -d --build                # dev compose
+# or
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-## 🌐 Cloud Deployment Options
+Endpoints (default):
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
 
-### Docker Compose (Recommended)
-- **Local development**: `docker-compose.yml`
-- **Production**: `deployment/docker-compose.prod.yml`
-- **Includes**: PostgreSQL, Redis, monitoring (Prometheus, Grafana)
+## GitHub Pages (Frontend Only)
 
-### AWS ECS
-- **Task Definition**: `deployment/aws/ecs-task-definition.json`
-- **ECR Integration**: Automatic image builds and pushes
-- **Secrets Management**: AWS Secrets Manager integration
-- **Load Balancing**: Application Load Balancer ready
+Goal: Publish the static Next.js frontend via GitHub Pages. The backend must be reachable at a public URL (self-hosted or a tunnel) and the frontend must point to that API.
 
-### Kubernetes (Future)
-- Helm charts for easy deployment
-- Horizontal pod autoscaling
-- Service mesh integration
+Limitations:
+- GitHub Pages is static hosting. Server functions/SSR are not supported.
+- Use static export of Next.js and configure a `basePath` when using a project site.
 
-## 🔒 Security Features
+### 1) Frontend config for static export
+We’ve configured Next.js to support optional static export with a base path.
+- Build-time env:
+  - `STATIC_EXPORT=true` to enable `next export`
+  - `NEXT_PUBLIC_BASE_PATH=/<repo>` for project pages, or empty for user/org pages
+  - `NEXT_PUBLIC_API_BASE_URL=https://your-api.example.com` so the UI can reach your backend
 
-### Backend Security
-- **CORS Configuration**: Environment-specific origins
-- **Trusted Host Middleware**: Production domain validation
-- **Request ID Tracking**: Request correlation and logging
-- **Error Handling**: User-friendly error messages without leaking internals
-
-### Container Security
-- **Non-root User**: Containers run as unprivileged user
-- **Minimal Base Images**: Alpine Linux for smaller attack surface
-- **Security Headers**: Comprehensive HTTP security headers
-- **Secret Management**: Environment-based secret injection
-
-## 📁 Project Structure
-
+Build locally to verify:
 ```
-smartHistory/
-├── src/
-│   ├── backend/
-│   │   ├── api/           # FastAPI application
-│   │   ├── config.py      # Dynamic configuration
-│   │   ├── start.py       # Startup script
-│   │   └── .env.*         # Environment configs
-│   └── frontend/
-│       ├── src/
-│       │   ├── config/    # Environment detection
-│       │   ├── api/       # Enhanced API client
-│       │   └── components/ # UI components
-├── deployment/            # Cloud deployment configs
-├── Dockerfile.*          # Container definitions
-├── docker-compose*.yml   # Orchestration configs
-└── deploy.sh            # Unified deployment script
+cd src/frontend
+NEXT_PUBLIC_API_BASE_URL=https://your-api.example.com \
+NEXT_PUBLIC_BASE_PATH=/your-repo \
+STATIC_EXPORT=true \
+npm run export
+
+# Output will be in out/
 ```
 
-## 🎯 Production Checklist
+### 2) GitHub Actions workflow
+We include a workflow that:
+- Builds the static site with the correct base path
+- Publishes `out/` to the `gh-pages` branch
 
-### Before Deployment
-- [ ] Set production environment variables
-- [ ] Configure allowed CORS origins
-- [ ] Set up database (PostgreSQL recommended)
-- [ ] Configure SSL/TLS certificates
-- [ ] Set up monitoring and alerting
-- [ ] Review security settings
+Adjust `NEXT_PUBLIC_BASE_PATH`:
+- Project pages (recommended): `/${{ github.event.repository.name }}`
+- User/org pages (repo named `<user>.github.io`): set it to empty `""`
 
-### Environment Variables (Production)
-```bash
-ENVIRONMENT=production
-DEBUG=false
-DATABASE_URL=postgresql://user:pass@host/db
-SECRET_KEY=your-secure-secret-key
-CORS_ORIGINS=https://yourdomain.com
-LOG_LEVEL=INFO
-```
+### 3) Enable Pages in the repo
+- GitHub → Settings → Pages
+- Source: Deploy from branch → `gh-pages` → `/` (root)
 
-## 🔧 Development Workflow
+### 4) Backend URL configuration
+- Ensure the backend is reachable at a public URL.
+- Set `NEXT_PUBLIC_API_BASE_URL` to that URL before building.
 
-1. **Local Development**: Use `./deploy.sh local`
-2. **Testing**: Run with Docker: `./deploy.sh docker`
-3. **Staging**: Deploy to staging environment
-4. **Production**: Use `./deploy.sh production`
+## Production Notes (Incremental)
+- Keep using SQLite until a managed Postgres is needed.
+- Harden CORS and secrets when exposing the backend publicly.
+- Add HTTPS via a reverse proxy (e.g., Nginx/Caddy) when hosting the API.
 
-## 🐳 Container Features
-
-- **Multi-stage Builds**: Optimized image sizes
-- **Health Checks**: Built-in container health monitoring
-- **Logging**: Structured logs for container orchestration
-- **Resource Limits**: Memory and CPU constraints
-- **Auto-restart**: Restart policies for resilience
-
-## 📈 Scalability
-
-- **Horizontal Scaling**: Stateless application design
-- **Load Balancing**: Multiple backend instances
-- **Database Pooling**: Connection management
-- **Caching**: Redis integration ready
-- **CDN Ready**: Static asset optimization
-
-This architecture provides a solid foundation for scaling from development to production with enterprise-grade reliability and security.
+This document will evolve as we wire up additional environments and CI/CD.

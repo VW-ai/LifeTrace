@@ -2,6 +2,203 @@
 This tracker serves as a log of what we have accomplished. sections are separated by time(date granularity)
 
 ---
+### 2025-09-27 (Frontend Complete - Fully Usable Dashboard Shipped ✅)
+
+- [COMPLETED] ✅ **Timeline View Improvements**
+  - Fixed date parsing issues using D3 local time parsing (`d3.timeParse("%Y-%m-%d %H:%M")`) to eliminate timezone-related bugs
+  - Applied modern design language with consistent typography, colors, and interactive elements
+  - Enhanced hover effects and tooltips for better user experience
+  - Added comprehensive event positioning debug logging for troubleshooting
+
+- [COMPLETED] ✅ **Galaxy View Enhanced**
+  - Implemented dynamic text sizing to ensure all tag names fit completely within circle nodes
+  - Added 1.75x hover zoom effect for both circles and text with smooth 200ms transitions
+  - Replaced underscores with spaces in tag display for better readability
+  - Enhanced text styling with shadows and proper contrast for visibility
+
+- [COMPLETED] ✅ **River View Redesigned**
+  - Removed inline legend and replaced with TagFrequencyCards component for consistency
+  - Applied timeline-style axis design with modern CSS variables and typography
+  - Implemented interactive tooltips showing tag names on hover
+  - Added click-to-filter functionality for direct tag filtering from river streams
+  - Updated margins and layout for cleaner appearance without legend space
+
+- [COMPLETED] ✅ **Calendar View Completely Redesigned**
+  - **Fixed Layout Issues**: Transformed from confusing overlapping bar layout to proper calendar grid
+  - **Traditional Calendar Structure**: Days in columns (S-M-T-W-T-F-S), weeks in rows
+  - **Modern Design System**: Applied consistent design language with rounded corners, proper spacing, and CSS variables
+  - **Activity Indicators**: Added dots on days with events and intelligent color scaling (None/Low/Medium/High)
+  - **Enhanced Legend**: Modern color squares with clear activity level labels
+  - **Better Typography**: Single-letter day headers and properly positioned month labels
+  - **Interactive Features**: Hover effects, click to view day details, and formatted tag display
+
+- [COMPLETED] ✅ **Universal Design Consistency**
+  - Standardized typography across all views using modern font stack
+  - Applied consistent color system using CSS custom properties
+  - Replaced underscores with spaces in tag names throughout the application
+  - Added TagFrequencyCards component to Galaxy and River views for unified experience
+  - Implemented hover states and transitions following design system patterns
+
+- [COMPLETED] ✅ **Filter Bar & Interaction Improvements**
+  - Enhanced filter functionality with visual active filter display
+  - Added comprehensive search across activities, tags, and details
+  - Implemented time period selection with proper date range handling
+  - Created advanced filter popover with source and tag filtering
+  - Added clear filter functionality with visual feedback
+
+**🎯 MILESTONE ACHIEVED: FULLY USABLE FRONTEND DASHBOARD**
+- **Professional Design**: Consistent, modern interface with shadcn/ui components
+- **Complete Functionality**: Timeline, Galaxy, River, and Calendar views all working
+- **Interactive Features**: Filtering, searching, date selection, event details
+- **Real Data Integration**: Live backend API consumption with proper error handling
+- **Responsive Design**: Adaptive layouts working across different screen sizes
+- **User Experience**: Smooth animations, hover effects, and intuitive interactions
+
+---
+### 2025-09-26 (Tag Quality & Frontend Enhancement)
+
+- [COMPLETED] ✅ **AI Tag Cleanup & Merge System** (Automated Quality Control)
+  - Created specialized AI service `TagCleaner` in `/src/backend/agent/tools/tag_cleaner.py` following REGULATION.md atomicity principles.
+  - Implemented centralized prompts in `/src/backend/agent/prompts/tag_cleanup_prompts.py` using creativity-encouraging approach.
+  - Built dual-action system: **Remove** meaningless tags (system artifacts, meta-concepts) + **Merge** similar variants (meetings→meeting, meal→meals).
+  - Added fallback pattern matching when AI unavailable with smart plural/singular detection.
+  - Created standalone runner `/runner/run_tag_cleanup.py` with dry-run and live modes.
+  - **Test Results**: Analyzed 309 tags, identified 8 for removal (including `scheduled_activity`), 1 for merge. Successfully eliminates noise tags.
+
+- [COMPLETED] ✅ **Frontend TopTagsList Component** (Professional Design-Aligned)
+  - Redesigned component to match user's desired clean, structured layout with numbered cards and keyword badges.
+  - Replaced complex expandable UI with simple list format: rank number, activity name, time estimate, keyword tags.
+  - Added real backend API endpoint `/api/v1/tags/relationships` for tag co-occurrence data.
+  - Enhanced `TagService` with `get_top_tags_with_relationships()` method following existing patterns.
+  - Updated frontend API client to consume real relationship data instead of mock data.
+
+- [COMPLETED] ✅ **Enhanced Tagging Prompt Engineering** (Creativity-Focused)
+  - Completely rewrote tagging prompts in `/src/backend/agent/prompts/tag_prompts.py` to eliminate constraining examples.
+  - Applied principle-based prompt design: "Think about activity across multiple dimensions" vs rigid category lists.
+  - Added automated meaningless tag prevention: prompts avoid system artifacts and meta-tags.
+  - Updated taxonomy builder prompts for data-driven discovery: "Let the data reveal its own patterns."
+  - Implemented English-only constraint with cultural/linguistic translation awareness.
+
+- [COMPLETED] ✅ **Google Calendar Data Quality Fixes**  
+  - Fixed severe duplicate problem: 16,249 → 2,226 clean events through proper deduplication logic.
+  - Resolved SQL parameter binding errors in `ingest_api.py` (time field parameter mismatch).
+  - Created `run_google_calendar_ingest.py` script for clean re-ingestion with schema migration support.
+  - Enhanced deduplication to handle event ID and HTML link matching with date/time validation.
+
+---
+### 2025-09-09 (Phase 1 complete; Phase 2 started)
+- Branch workflow: set up per-branch worktrees for clean isolation
+  - main → /Users/waynewang/smartHistory-main
+  - feat/tagging_upgrade (legacy) → /Users/waynewang/smartHistory-tagging-upgrade
+  - feat/tagging_upgrade_clean (refactor) → /Users/waynewang/smartHistory
+- Backend refactor (Phase 1):
+  - Fixed DB insert pattern: added same-cursor `execute_insert` and updated all DAOs to avoid lastrowid race
+  - Fixed Pydantic mutable defaults via `default_factory` in API response models
+  - Added scripts/evaluate_tagging.py to track coverage, avg tags/activity, top tags, confidence buckets
+  - Baseline metrics on current DB: coverage 100%, avg tags/activity ≈ 1.05, multi-tag ratio ≈ 0.046, “work” dominant
+- Frontend fixes:
+  - Responsive chart heights (vh) and equal-width chart layout (50%/50%)
+  - Prevented body vertical-centering to avoid clipping top area; container now uses full width
+- Tagging improvements (Phase 2 kick-off):
+  - Implemented calibrated TagGenerator scoring: thresholds, top-N selection, synonyms/taxonomy weighting, source bias, duration scaling
+  - Added `src/backend/agent/resources/tagging_calibration.json` + META for iterative tuning
+- Alignment with Tagging_Enhance_Proposal.md (functional direction):
+  - Plan next: Calendar-as-Query + Notion-as-Context pipeline
+    - Separate storage paths for calendar vs notion; preserve Notion parent/child tree; daily edited-tree tracking
+    - Generate 30–100 word abstracts for leaf blocks; store and embed for IR
+    - Retrieval: time-window → candidate blocks; then embedding R@K; then LLM reasoning to finalize context
+    - Feed abstracts/context into tagging and insights
+
+### 2025-09-18 (Prompt & pipeline refinements; no remote divergence)
+- Git state
+  - Branch: `feat/tagging_upgrade_clean`; Upstream: `origin/feat/tagging_upgrade_clean`
+  - Ahead/Behind vs remote: 0/0 commits (no divergence)
+  - Working tree has local modifications and untracked helpers (details below)
+
+- Tagging prompts (LLM)
+  - Updated `src/backend/agent/prompts/tag_prompts.py` to support 1–10 tags
+  - Prefer taxonomy for the primary tag but allow new, concise dimension tags
+  - Inject calibration-driven taxonomy and synonym cues into prompts
+  - Emphasize multi-dimensional tagging (category/type/topic/tool/context/outcome)
+  - Output remains comma-separated for backward compatibility
+
+- TagGenerator integration
+  - Passes calibration to prompt builders; respects `max_tags=10`
+  - Adds selection logic to prefer specific child tags over generic parents
+  - Logs tagging events with retrieval context and normalized scores (`tagging_logger`)
+  - Auto-loads optional generated taxonomy/synonyms if present in resources
+
+- Google Calendar ingest
+  - `src/backend/parsers/google_calendar/ingest_api.py`: upsert behavior to dedupe by event id/link + date/time
+  - Uses DB manager for efficient existence checks; updates details/duration/raw_data when found
+
+- Documentation
+  - `README.md` expanded with runner scripts, tagging pipeline overview, and logs/observability section
+
+- Data artifacts
+  - `existing_tags.json` reordered/expanded to reflect recent generation (adds backend/frontend/social/health, etc.)
+
+- Untracked (new helpers present locally)
+  - `runner/`: `run_ingest.py`, `run_process_range.py`, `run_build_taxonomy.py`, `run_google_calendar_ingest.py`
+  - `src/backend/agent/tools/`: `tagging_logger.py`, `taxonomy_builder.py`
+  - `src/backend/parsers/notion/incremental_ingest.py`
+  - `logs/` directory for JSONL tagging run outputs
+
+- Changed files (details)
+  - `src/backend/agent/prompts/tag_prompts.py`
+    - New calibration-aware prompts: inject recommended taxonomy + synonyms
+    - Allow 1–10 tags; layered guidance for category/type/topic/tool/context/outcome
+    - Keep comma-separated output for compatibility; flexible (not enforced-only)
+  - `src/backend/agent/tools/tag_generator.py`
+    - Pass calibration into prompts; respect `max_tags=10`
+    - Selection prefers specific child tags; trims redundant parents
+    - Normalizes scores; logs events with retrieval context via `tagging_logger`
+    - Optionally auto-loads `hierarchical_taxonomy_generated.json` and `synonyms_generated.json`
+  - `src/backend/parsers/google_calendar/ingest_api.py`
+    - Upsert raw_activities by `(source,id|orig_link,date,time)`; update on duplicate
+    - Reduces duplicates; keeps latest details/duration/raw payloads
+  - `README.md`
+    - Adds runner instructions, tagging flow overview, and logging instructions
+  - `existing_tags.json`
+    - Expanded and reordered to reflect recent runs (e.g., backend/frontend/social/health)
+
+- New files (purpose)
+  - `runner/run_ingest.py`
+    - DB-only ingestion: runs migrations, gcal ingest, Notion ingest, and Notion indexing (abstracts + embeddings)
+    - Ensures Notion table columns exist (is_leaf, abstract, last_edited_at, text, block_type)
+  - `runner/run_process_range.py`
+    - Tagging-only reprocessor for date ranges; writes JSONL log to `logs/`
+    - Sets `TAGGING_LOG_FILE` env to enable structured logging
+  - `runner/run_build_taxonomy.py`
+    - Builds data-driven taxonomy + synonyms via AI (fallback to frequency sketch)
+    - Writes `agent/resources/hierarchical_taxonomy_generated.json` and `synonyms_generated.json`
+  - `runner/run_google_calendar_ingest.py`
+    - Convenience script to ingest Google Calendar with schema checks
+  - `src/backend/agent/tools/tagging_logger.py`
+    - Minimal JSONL logger; `get_logger()` reads `TAGGING_LOG_FILE` and appends records
+  - `src/backend/agent/tools/taxonomy_builder.py`
+    - Fetches corpus (calendar + Notion abstracts); uses OpenAI (or fallback) to propose taxonomy + synonyms
+  - `src/backend/parsers/notion/incremental_ingest.py`
+    - Incremental Notion ingestor with batching, retries, and progress callbacks; upserts pages/blocks
+  - `META/TAGGING_PIPELINE.md`
+    - End-to-end pipeline spec (ingest → index → retrieve → tag → persist → evaluate) + taxonomy builder + logging notes
+
+- Backend logic deltas (high-level)
+  - Tagging becomes multi-dimensional: primary taxonomy-aligned tag plus detailed “dimension” tags (type/topic/tool/context/outcome)
+  - Prompting leverages calibration (taxonomy/synonyms/weights) and allows up to 10 tags, increasing descriptive richness
+  - Tag selection logic prioritizes specificity (child over parent) and de-duplicates redundant ancestors
+  - Observability added: structured JSONL logs per run with retrieval context and normalized scores
+  - Ingestion robustness: Google Calendar upsert prevents duplicates; Notion incremental ingest supports batching/retries
+
+- Data storage deltas (high-level)
+  - Notion tables ensured to include: `notion_blocks.is_leaf`, `abstract`, `last_edited_at`, `text`, `block_type` for IR + summaries
+  - New generated resources optionally consumed at runtime: `hierarchical_taxonomy_generated.json`, `synonyms_generated.json`
+  - `raw_activities` upsert path updates existing rows by event id/link + date/time (reduces duplicates)
+
+- Next
+  - Optionally add a JSON-output prompt for confidences + reasons and wire parsing
+  - Seed and version `tag_taxonomy.json` and `synonyms.json` (separate from calibration) and expose `/api/v1/taxonomy` (read-only)
+
 ### 2025-09-01 (MILESTONE 1: MVP SYSTEM ARCHITECTURE ESTABLISHED ✅)
 - **🔧 CRITICAL BUG FIXES & DATA INTEGRITY:**
   - **Database Path Mismatch:** Fixed backend using empty database while populated data existed in project root

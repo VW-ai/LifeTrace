@@ -34,8 +34,11 @@ class DataConsumer:
         
         return self._db_manager
     
-    def load_raw_activities_from_database(self, hours_filter: int = 24*3) -> List[RawActivity]:
-        """Load raw activities directly from database (preferred method)."""
+    def load_raw_activities_from_database(self, date_start: Optional[str] = None,
+                                          date_end: Optional[str] = None) -> List[RawActivity]:
+        """Load raw activities directly from database (preferred method).
+        Optional date range filtering (YYYY-MM-DD).
+        """
         db_manager = self._get_db_manager()
         
         if db_manager is None:
@@ -43,17 +46,17 @@ class DataConsumer:
             return self.load_all_raw_activities()  # Fallback to old method
         
         try:
-            # Get raw activities from database - limit to first 3 days for testing
-            raw_activities_db = self._raw_activity_dao.get_all()
-            
-            # Filter to first 3 days only
-            first_dates = ['2025-08-01', '2025-08-02', '2025-08-03']
-            filtered_activities_db = [activity for activity in raw_activities_db 
-                                    if activity.date in first_dates]
+            # Get raw activities from database
+            if date_start or date_end:
+                start = date_start or '0000-01-01'
+                end = date_end or '9999-12-31'
+                raw_activities_db = self._raw_activity_dao.get_by_date_range(start, end)
+            else:
+                raw_activities_db = self._raw_activity_dao.get_all()
             
             # Convert database models to agent models
             raw_activities = []
-            for activity_db in filtered_activities_db:
+            for activity_db in raw_activities_db:
                 # Convert database model to agent model
                 raw_activity = RawActivity(
                     date=activity_db.date,
@@ -66,7 +69,7 @@ class DataConsumer:
                 )
                 raw_activities.append(raw_activity)
             
-            print(f"Loaded {len(raw_activities)} raw activities from database (filtered to first 3 days)")
+            print(f"Loaded {len(raw_activities)} raw activities from database")
             return raw_activities
             
         except Exception as e:

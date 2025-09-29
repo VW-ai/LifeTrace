@@ -23,6 +23,7 @@ from src.backend.database import (
 )
 from src.backend.agent.core.activity_processor import ActivityProcessor
 from .models import *
+from src.backend.agent.tools.context_retriever import ContextRetriever
 
 
 class ActivityService:
@@ -300,78 +301,383 @@ class TagService:
             created_at=tag_db.created_at,
             updated_at=tag_db.updated_at
         )
-    
+
     async def create_tag(self, tag_data: TagCreateRequest) -> TagResponse:
         """Create a new tag."""
-        # Check if tag already exists
-        existing = TagDAO.get_by_name(tag_data.name)
-        if existing:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=409, detail=f"Tag '{tag_data.name}' already exists")
-        
-        # Create new tag
         tag_db = TagDB(
             name=tag_data.name,
             description=tag_data.description,
-            color=tag_data.color,
-            usage_count=0
+            color=tag_data.color
         )
-        
+
         tag_id = TagDAO.create(tag_db)
-        created_tag = TagDAO.get_by_id(tag_id)
-        
-        return TagResponse(
-            id=created_tag.id,
-            name=created_tag.name,
-            description=created_tag.description,
-            color=created_tag.color,
-            usage_count=created_tag.usage_count,
-            created_at=created_tag.created_at,
-            updated_at=created_tag.updated_at
-        )
-    
+        return await self.get_tag_by_id(tag_id)
+
     async def update_tag(self, tag_id: int, tag_data: TagUpdateRequest) -> Optional[TagResponse]:
         """Update an existing tag."""
-        existing = TagDAO.get_by_id(tag_id)
-        if not existing:
+        existing_tag = TagDAO.get_by_id(tag_id)
+        if not existing_tag:
             return None
-        
-        # Check name collision
-        name_check = TagDAO.get_by_name(tag_data.name)
-        if name_check and name_check.id != tag_id:
-            raise ValueError(f"Tag '{tag_data.name}' already exists")
-        
-        # Update tag
-        existing.name = tag_data.name
-        existing.description = tag_data.description
-        existing.color = tag_data.color
-        existing.updated_at = datetime.now()
-        
-        TagDAO.update(existing)
-        updated_tag = TagDAO.get_by_id(tag_id)
-        
-        return TagResponse(
-            id=updated_tag.id,
-            name=updated_tag.name,
-            description=updated_tag.description,
-            color=updated_tag.color,
-            usage_count=updated_tag.usage_count,
-            created_at=updated_tag.created_at,
-            updated_at=updated_tag.updated_at
+
+        updated_tag = TagDB(
+            id=tag_id,
+            name=tag_data.name,
+            description=tag_data.description,
+            color=tag_data.color,
+            usage_count=existing_tag.usage_count,
+            created_at=existing_tag.created_at,
+            updated_at=datetime.now()
         )
-    
+
+        TagDAO.update(updated_tag)
+        return await self.get_tag_by_id(tag_id)
+
     async def delete_tag(self, tag_id: int) -> bool:
         """Delete a tag."""
-        existing = TagDAO.get_by_id(tag_id)
-        if not existing:
+        existing_tag = TagDAO.get_by_id(tag_id)
+        if not existing_tag:
             return False
-        
-        # Delete associated activity_tags first
-        ActivityTagDAO.delete_by_tag_id(tag_id)
-        
-        # Delete the tag
+
         TagDAO.delete(tag_id)
         return True
+
+    async def get_tag_summary(self, start_date: Optional[str] = None,
+                             end_date: Optional[str] = None,
+                             limit: int = 20) -> TagSummaryResponse:
+        """Get tag usage summary."""
+        # Build query with date filters
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa.date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("pa.date <= ?")
+            params.append(end_date)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT t.name as tag,
+                   COUNT(*) as count,
+                   ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+            FROM tags t
+            JOIN activity_tags at ON t.id = at.tag_id
+            JOIN processed_activities pa ON at.processed_activity_id = pa.id
+            {where_clause}
+            GROUP BY t.id, t.name
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        results = self.db.execute_query(query, params)
+
+        # Get total count
+        total_query = "SELECT COUNT(DISTINCT id) as count FROM tags"
+        total_result = self.db.execute_query(total_query)
+        total_tags = total_result[0]['count'] if total_result else 0
+
+        # Convert to response format
+        top_tags = []
+        color_map = {}
+
+        for row in results:
+            top_tags.append(TagSummaryItem(
+                tag=row['tag'],
+                count=row['count'],
+                percentage=row['percentage']
+            ))
+
+            # Get color for this tag
+            tag_color_query = "SELECT color FROM tags WHERE name = ?"
+            tag_color_result = self.db.execute_query(tag_color_query, [row['tag']])
+            if tag_color_result:
+                color_map[row['tag']] = tag_color_result[0]['color'] or '#6b7280'
+
+        return TagSummaryResponse(
+            total_tags=total_tags,
+            top_tags=top_tags,
+            color_map=color_map
+        )
+
+    async def get_tag_cooccurrence(self, start_date: Optional[str] = None,
+                                  end_date: Optional[str] = None,
+                                  tags: Optional[List[str]] = None,
+                                  threshold: int = 2,
+                                  limit: int = 50) -> TagCooccurrenceResponse:
+        """Get tag co-occurrence analysis."""
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa.date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("pa.date <= ?")
+            params.append(end_date)
+        if tags:
+            placeholders = ','.join(['?' for _ in tags])
+            conditions.append(f"(t1.name IN ({placeholders}) OR t2.name IN ({placeholders}))")
+            params.extend(tags * 2)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT t1.name as tag1, t2.name as tag2,
+                   COUNT(*) as count,
+                   ROUND(COUNT(*) * 1.0 / MAX(tag_counts.max_count), 3) as strength
+            FROM activity_tags at1
+            JOIN activity_tags at2 ON at1.processed_activity_id = at2.processed_activity_id
+                                   AND at1.tag_id < at2.tag_id
+            JOIN tags t1 ON at1.tag_id = t1.id
+            JOIN tags t2 ON at2.tag_id = t2.id
+            JOIN processed_activities pa ON at1.processed_activity_id = pa.id
+            CROSS JOIN (SELECT MAX(cnt) as max_count FROM (
+                SELECT COUNT(*) as cnt
+                FROM activity_tags at3
+                JOIN processed_activities pa3 ON at3.processed_activity_id = pa3.id
+                {where_clause.replace('pa.', 'pa3.')}
+                GROUP BY at3.tag_id
+            )) tag_counts
+            {where_clause}
+            GROUP BY t1.id, t1.name, t2.id, t2.name
+            HAVING count >= ?
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        params.extend([threshold, limit])
+
+        results = self.db.execute_query(query, params)
+
+        data = []
+        for row in results:
+            data.append(TagCooccurrenceItem(
+                tag1=row['tag1'],
+                tag2=row['tag2'],
+                strength=row['strength'],
+                count=row['count']
+            ))
+
+        return TagCooccurrenceResponse(data=data)
+
+    async def get_tag_transitions(self, start_date: Optional[str] = None,
+                                 end_date: Optional[str] = None,
+                                 tags: Optional[List[str]] = None,
+                                 limit: int = 50) -> TagTransitionResponse:
+        """Get tag transition patterns."""
+        # This is a simplified implementation - in a real system you'd analyze temporal sequences
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa1.date >= ? AND pa2.date >= ?")
+            params.extend([start_date, start_date])
+        if end_date:
+            conditions.append("pa1.date <= ? AND pa2.date <= ?")
+            params.extend([end_date, end_date])
+        if tags:
+            placeholders = ','.join(['?' for _ in tags])
+            conditions.append(f"(t1.name IN ({placeholders}) OR t2.name IN ({placeholders}))")
+            params.extend(tags * 2)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT t1.name as from_tag, t2.name as to_tag,
+                   COUNT(*) as count,
+                   ROUND(COUNT(*) * 1.0 / SUM(COUNT(*)) OVER(), 3) as strength
+            FROM processed_activities pa1
+            JOIN activity_tags at1 ON pa1.id = at1.processed_activity_id
+            JOIN tags t1 ON at1.tag_id = t1.id
+            JOIN processed_activities pa2 ON DATE(pa2.date) = DATE(pa1.date, '+1 day')
+            JOIN activity_tags at2 ON pa2.id = at2.processed_activity_id
+            JOIN tags t2 ON at2.tag_id = t2.id
+            {where_clause}
+            GROUP BY t1.id, t1.name, t2.id, t2.name
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        results = self.db.execute_query(query, params)
+
+        data = []
+        for row in results:
+            data.append(TagTransitionItem(
+                from_tag=row['from_tag'],
+                to_tag=row['to_tag'],
+                strength=row['strength'],
+                count=row['count']
+            ))
+
+        return TagTransitionResponse(data=data)
+
+    async def get_tag_time_series(self, start_date: Optional[str] = None,
+                                 end_date: Optional[str] = None,
+                                 tags: Optional[List[str]] = None,
+                                 granularity: str = "day",
+                                 mode: str = "absolute") -> TagTimeSeriesResponse:
+        """Get tag time series data."""
+        conditions = []
+        params = []
+
+        if start_date:
+            conditions.append("pa.date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("pa.date <= ?")
+            params.append(end_date)
+        if tags:
+            placeholders = ','.join(['?' for _ in tags])
+            conditions.append(f"t.name IN ({placeholders})")
+            params.extend(tags)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        # Determine time grouping based on granularity
+        if granularity == "hour":
+            time_group = "pa.date, CAST(strftime('%H', pa.time) as INTEGER)"
+            time_select = "pa.date, CAST(strftime('%H', pa.time) as INTEGER) as hour"
+        else:
+            time_group = "pa.date"
+            time_select = "pa.date, NULL as hour"
+
+        query = f"""
+            SELECT t.name as tag, {time_select},
+                   COUNT(*) as count,
+                   SUM(pa.total_duration_minutes) as duration
+            FROM tags t
+            JOIN activity_tags at ON t.id = at.tag_id
+            JOIN processed_activities pa ON at.processed_activity_id = pa.id
+            {where_clause}
+            GROUP BY t.id, t.name, {time_group}
+            ORDER BY pa.date, t.name
+        """
+
+        results = self.db.execute_query(query, params)
+
+        data = []
+        for row in results:
+            data.append(TagTimeSeriesItem(
+                tag=row['tag'],
+                date=row['date'],
+                hour=row['hour'],
+                count=row['count'],
+                duration=row['duration'] or 0
+            ))
+
+        return TagTimeSeriesResponse(data=data)
+
+    async def get_top_tags_with_relationships(self, top_tags_limit: int = 5,
+                                            related_tags_limit: int = 5):
+        """Get top tags with their co-occurring related tags."""
+        # Get top tags by usage
+        top_tags_query = """
+            SELECT t.name, t.usage_count
+            FROM tags t
+            ORDER BY t.usage_count DESC
+            LIMIT ?
+        """
+        top_tags_result = self.db.execute_query(top_tags_query, [top_tags_limit])
+
+        relationships = {}
+        for tag_row in top_tags_result:
+            tag_name = tag_row['name']
+
+            # Get related tags for this tag
+            related_query = """
+                SELECT t2.name as related_tag, COUNT(*) as cooccurrence_count
+                FROM activity_tags at1
+                JOIN activity_tags at2 ON at1.processed_activity_id = at2.processed_activity_id
+                                       AND at1.tag_id != at2.tag_id
+                JOIN tags t1 ON at1.tag_id = t1.id
+                JOIN tags t2 ON at2.tag_id = t2.id
+                WHERE t1.name = ?
+                GROUP BY t2.id, t2.name
+                ORDER BY cooccurrence_count DESC
+                LIMIT ?
+            """
+            related_result = self.db.execute_query(related_query, [tag_name, related_tags_limit])
+
+            relationships[tag_name] = {
+                'usage_count': tag_row['usage_count'],
+                'related_tags': [
+                    {
+                        'tag': row['related_tag'],
+                        'cooccurrence_count': row['cooccurrence_count']
+                    }
+                    for row in related_result
+                ]
+            }
+
+        return relationships
+
+    async def cleanup_tags(self, request: TagCleanupRequest) -> TagCleanupResponse:
+        """Clean up meaningless tags using AI analysis."""
+        try:
+            from src.backend.agent.tools.tag_cleaner import TagCleaner
+
+            # Initialize tag cleaner
+            cleaner = TagCleaner()
+
+            # Perform cleanup
+            result = cleaner.clean_meaningless_tags(
+                db_manager=self.db,
+                dry_run=request.dry_run,
+                removal_threshold=request.removal_threshold,
+                merge_threshold=request.merge_threshold,
+                date_start=request.date_start,
+                date_end=request.date_end
+            )
+
+            # Convert to API response format
+            tags_to_remove = [
+                TagCleanupAction(
+                    name=tag["name"],
+                    reason=tag["reason"],
+                    confidence=tag["confidence"]
+                )
+                for tag in result.get("tags_to_remove", [])
+            ]
+
+            tags_to_merge = [
+                TagCleanupAction(
+                    name=tag["source"],
+                    reason=tag["reason"],
+                    confidence=tag["confidence"],
+                    target=tag["target"]
+                )
+                for tag in result.get("tags_to_merge", [])
+            ]
+
+            return TagCleanupResponse(
+                status=result["status"],
+                total_analyzed=result["total_analyzed"],
+                marked_for_removal=result["marked_for_removal"],
+                marked_for_merge=result["marked_for_merge"],
+                removed=result["removed"],
+                merged=result["merged"],
+                dry_run=result["dry_run"],
+                scope=result["scope"],
+                tags_to_remove=tags_to_remove,
+                tags_to_merge=tags_to_merge
+            )
+
+        except Exception as e:
+            return TagCleanupResponse(
+                status="error",
+                total_analyzed=0,
+                marked_for_removal=0,
+                marked_for_merge=0,
+                removed=0,
+                merged=0,
+                dry_run=request.dry_run,
+                scope={"date_start": request.date_start, "date_end": request.date_end},
+                tags_to_remove=[],
+                tags_to_merge=[]
+            )
 
 
 class InsightsService:
@@ -626,6 +932,97 @@ class ProcessingService:
                 "message": str(e),
                 "source": "google_calendar"
             }
+
+    async def backfill_calendar(self, months: int = 7) -> Dict[str, Any]:
+        """One-click backfill for the last N months of calendar events."""
+        try:
+            hours = int(months * 30 * 24)
+            from src.backend.parsers.google_calendar.parser import parse_to_database
+            count = parse_to_database('google_calendar_events.json', 
+                                      hours_since_last_update=hours)
+            return {
+                "status": "success",
+                "backfilled_months": months,
+                "imported_count": count
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    async def reprocess_date_range(self, date_start: str, date_end: str,
+                                   regenerate_system_tags: bool = False) -> Dict[str, Any]:
+        """Purge processed results for a date range and reprocess that range.
+        Note: current processor runs DB-wide but filters to the date range.
+        """
+        try:
+            # Purge processed activities in range (cascade deletes activity_tags)
+            deleted = self.db.execute_update(
+                "DELETE FROM processed_activities WHERE date >= ? AND date <= ?",
+                (date_start, date_end)
+            )
+            # Run processing for specified date range
+            processor = ActivityProcessor()
+            processor.enable_system_tag_regeneration = regenerate_system_tags
+            report = processor.process_daily_activities(
+                use_database=True,
+                date_start=date_start,
+                date_end=date_end
+            )
+
+            return {
+                "status": "success",
+                "deleted_processed": deleted,
+                "date_start": date_start,
+                "date_end": date_end,
+                "processed_counts": report.get('processed_counts', {}),
+                "tag_analysis": report.get('tag_analysis', {})
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    async def index_notion_blocks(self, scope: str = "all", hours: int = 24) -> Dict[str, Any]:
+        """Generate abstracts and embeddings for Notion blocks.
+        scope: 'all' or 'recent' (by edited time window)
+        """
+        from src.backend.database import NotionBlockDAO, NotionEmbeddingDAO, NotionEmbeddingDB
+        from src.backend.notion.abstracts import generate_abstract, embed_text
+
+        try:
+            if scope == "recent":
+                blocks = NotionBlockDAO.get_recently_edited(hours=hours)
+            else:
+                blocks = NotionBlockDAO.get_all_leaf_blocks()
+
+            processed = 0
+            for blk in blocks:
+                # Ensure abstract
+                abstract = blk.abstract or generate_abstract(blk.text or "")
+                if abstract != blk.abstract:
+                    # update abstract field via upsert
+                    from src.backend.database import NotionBlockDB
+                    updated = NotionBlockDB(
+                        block_id=blk.block_id,
+                        page_id=blk.page_id,
+                        parent_block_id=blk.parent_block_id,
+                        is_leaf=blk.is_leaf,
+                        text=blk.text,
+                        abstract=abstract,
+                        last_edited_at=blk.last_edited_at,
+                    )
+                    from src.backend.database import NotionBlockDAO as NBD
+                    NBD.upsert(updated)
+
+                # Ensure embedding
+                emb = NotionEmbeddingDAO.get_by_block(blk.block_id)
+                if not emb or not (emb.vector):
+                    vec = embed_text(abstract or (blk.text or ""))
+                    emb_db = NotionEmbeddingDB(block_id=blk.block_id, vector=vec)
+                    NotionEmbeddingDAO.upsert(emb_db)
+
+                processed += 1
+
+            return {"status": "success", "processed_blocks": processed, "scope": scope}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
     
     async def import_notion_data(self, request: ImportRequest) -> Dict[str, Any]:
         """Import data from Notion parser."""
@@ -669,6 +1066,133 @@ class ProcessingService:
         except Exception as e:
             return {"error": str(e)}
 
+    async def build_taxonomy(self, request: TaxonomyBuildRequest) -> TaxonomyBuildResponse:
+        """Build AI-generated tag taxonomy and synonyms."""
+        try:
+            from src.backend.agent.tools.taxonomy_builder import build_and_save
+
+            # Call taxonomy builder
+            result = build_and_save(
+                date_start=request.date_start,
+                date_end=request.date_end
+            )
+
+            # Parse the result to extract information
+            if isinstance(result, dict) and result.get("status") == "success":
+                return TaxonomyBuildResponse(
+                    status="success",
+                    message=result.get("message", "Taxonomy and synonyms built successfully"),
+                    files_generated=result.get("files", []),
+                    taxonomy_size=result.get("taxonomy_size"),
+                    synonyms_count=result.get("synonyms_count"),
+                    data_scope={
+                        "date_start": request.date_start,
+                        "date_end": request.date_end
+                    }
+                )
+            else:
+                # Handle string response or error case
+                message = str(result) if not isinstance(result, dict) else result.get("message", "Taxonomy build completed")
+                return TaxonomyBuildResponse(
+                    status="success",
+                    message=message,
+                    files_generated=[
+                        "agent/resources/hierarchical_taxonomy_generated.json",
+                        "agent/resources/synonyms_generated.json"
+                    ],
+                    data_scope={
+                        "date_start": request.date_start,
+                        "date_end": request.date_end
+                    }
+                )
+
+        except Exception as e:
+            return TaxonomyBuildResponse(
+                status="error",
+                message=f"Taxonomy build failed: {str(e)}",
+                files_generated=[],
+                data_scope={
+                    "date_start": request.date_start,
+                    "date_end": request.date_end
+                }
+            )
+
+    async def get_processing_logs(self,
+                                 limit: int = 100,
+                                 offset: int = 0,
+                                 level: Optional[str] = None,
+                                 source: Optional[str] = None) -> ProcessingLogsResponse:
+        """Get processing logs with filtering and pagination."""
+        try:
+            import os
+            from pathlib import Path
+            import json
+            from datetime import datetime
+
+            # Check for log files in logs/ directory
+            log_dir = Path("logs")
+            log_entries = []
+
+            if log_dir.exists():
+                # Read JSONL log files
+                for log_file in log_dir.glob("*.jsonl"):
+                    try:
+                        with open(log_file, 'r') as f:
+                            for line in f:
+                                if line.strip():
+                                    try:
+                                        entry = json.loads(line.strip())
+
+                                        # Convert to ProcessingLogEntry format
+                                        log_entry = ProcessingLogEntry(
+                                            timestamp=datetime.fromisoformat(entry.get('timestamp', datetime.now().isoformat())),
+                                            level=entry.get('level', 'INFO'),
+                                            message=entry.get('message', ''),
+                                            source=entry.get('source', log_file.stem),
+                                            context=entry.get('context')
+                                        )
+
+                                        # Apply filters
+                                        if level and log_entry.level != level:
+                                            continue
+                                        if source and log_entry.source != source:
+                                            continue
+
+                                        log_entries.append(log_entry)
+                                    except json.JSONDecodeError:
+                                        continue
+                    except Exception:
+                        continue
+
+            # Sort by timestamp (newest first)
+            log_entries.sort(key=lambda x: x.timestamp, reverse=True)
+
+            # Apply pagination
+            total_count = len(log_entries)
+            paginated_logs = log_entries[offset:offset + limit]
+
+            return ProcessingLogsResponse(
+                logs=paginated_logs,
+                total_count=total_count,
+                page_info=PageInfo(
+                    limit=limit,
+                    offset=offset,
+                    has_next_page=offset + limit < total_count
+                )
+            )
+
+        except Exception as e:
+            # Return empty response on error
+            return ProcessingLogsResponse(
+                logs=[],
+                total_count=0,
+                page_info=PageInfo(
+                    limit=limit,
+                    offset=offset,
+                    has_next_page=False
+                )
+            )
+
 
 class SystemService:
     """Service for system health and statistics."""
@@ -695,18 +1219,18 @@ class SystemService:
                 total_activities=total_activities,
                 last_updated=datetime.fromisoformat(last_updated) if isinstance(last_updated, str) else last_updated
             )
-            
+
             services_health = ServiceHealth(
                 tag_generator="operational",
                 activity_matcher="operational"
             )
-            
+
             return SystemHealthResponse(
                 status="healthy",
                 database=database_health,
                 services=services_health
             )
-            
+
         except Exception as e:
             return SystemHealthResponse(
                 status="down",
@@ -752,7 +1276,6 @@ class SystemService:
                 last_processing_run=datetime.fromisoformat(last_processing) if last_processing else None,
                 uptime_seconds=uptime_seconds
             )
-            
         except Exception as e:
             # Return error stats
             return SystemStatsResponse(
@@ -764,3 +1287,44 @@ class SystemService:
                 last_processing_run=None,
                 uptime_seconds=0
             )
+
+    # Retrieval / Context endpoints (class-level methods)
+    async def get_notion_context(self, query: str, hours: int = 24, k: int = 5) -> Dict[str, Any]:
+        """Retrieve top-K Notion contexts for a query within recent hours."""
+        retriever = ContextRetriever()
+        results = retriever.retrieve(query, hours=hours, k=k)
+        items = []
+        for r in results:
+            blk = r.block
+            items.append({
+                "block_id": blk.block_id,
+                "page_id": blk.page_id,
+                "parent_block_id": blk.parent_block_id,
+                "is_leaf": blk.is_leaf,
+                "text": blk.text,
+                "abstract": blk.abstract,
+                "last_edited_at": blk.last_edited_at,
+                "score": round(r.score, 4)
+            })
+        return {"query": query, "results": items}
+
+    async def get_notion_context_by_date(self, query: str, date: str, window_days: int = 1, k: int = 5) -> Dict[str, Any]:
+        """Retrieve top-K Notion contexts around a specific date.
+        date format: YYYY-MM-DD; window_days selects [date - window_days, date + window_days].
+        """
+        retriever = ContextRetriever()
+        results = retriever.retrieve_by_date(query, date=date, days_window=window_days, k=k)
+        items = []
+        for r in results:
+            blk = r.block
+            items.append({
+                "block_id": blk.block_id,
+                "page_id": blk.page_id,
+                "parent_block_id": blk.parent_block_id,
+                "is_leaf": blk.is_leaf,
+                "text": blk.text,
+                "abstract": blk.abstract,
+                "last_edited_at": blk.last_edited_at,
+                "score": round(r.score, 4)
+            })
+        return {"query": query, "date": date, "window_days": window_days, "results": items}

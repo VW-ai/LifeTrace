@@ -59,6 +59,7 @@ processed_activities.json
 
 # Temporary and Log Files
 *.log
+logs/
 *.tmp
 .DS_Store
 *.swp
@@ -75,3 +76,5 @@ setup_api.py
 # API Test Artifacts
 test_output/
 api_test_results/
+
+*.zip

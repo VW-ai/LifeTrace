@@ -1,10 +1,21 @@
 """
-SmartHistory REST API
+SmartHistory REST API package
 
-FastAPI-based REST API providing access to SmartHistory's activity processing
-and analytics capabilities for frontend consumption.
+Note: Avoid importing the FastAPI app at package import time to prevent
+heavy dependencies from loading in contexts that only need service-layer
+utilities. Use lazy imports in the accessors below.
 """
 
-from .server import create_app, get_api_app
+from typing import Any
 
 __all__ = ['create_app', 'get_api_app']
+
+
+def create_app() -> Any:
+    from .server import create_app as _create
+    return _create()
+
+
+def get_api_app() -> Any:
+    from .server import get_api_app as _get
+    return _get()

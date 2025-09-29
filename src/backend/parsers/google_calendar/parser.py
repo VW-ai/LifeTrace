@@ -1,3 +1,13 @@
+"""
+DEPRECATED: Legacy Google Calendar Parser
+
+⚠️  WARNING: This file is deprecated and will be removed in a future version.
+⚠️  MIGRATION: Use `src/backend/parsers/google_calendar/ingest_api.py` instead.
+⚠️  REASON: File-based JSON parsing superseded by direct database ingestion.
+
+Legacy file-based parser functionality for Google Calendar events.
+"""
+
 import json
 from datetime import datetime, timedelta, timezone
 
