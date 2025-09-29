@@ -1,188 +1,113 @@
-# SmartHistory - Activity Analytics Platform
+# SmartHistory - AI-Powered Activity Analytics Platform
 
-A modern, industry-ready platform for processing and analyzing activity data from various sources like Notion and Google Calendar.
+> Transform your calendar and notes into beautiful, interactive visualizations with AI-powered insights.
 
-## 🚀 Quick Start
+## ✨ See It In Action
 
-Setup once:
+### 🎯 Intelligent Data Visualization
+
+**River View** - Flow of your activities over time
+![River View](demo/views/river.png)
+*Watch your daily activities flow like a river, with AI-categorized events showing patterns and trends over time.*
+
+**Galaxy View** - Explore activity relationships in space
+![Galaxy View](demo/views/galaxy.png)
+*Navigate your activity universe where related events cluster together, revealing hidden connections in your work and life.*
+
+**Timeline View** - Classic chronological perspective
+![Timeline View](demo/views/timeline.png)
+*See your activities laid out chronologically with rich context and AI-generated tags for easy navigation.*
+
+**Calendar Integration** - Enhanced calendar with AI insights
+![Calendar View](demo/views/calendar.png)
+*Your familiar calendar view enhanced with AI-powered categorization and contextual information.*
+
+**Stories View** - Narrative insights from your data
+![Stories View](demo/views/stories.png)
+*Discover meaningful patterns and narratives automatically extracted from your activity history.*
+
+**Chord Diagram** - Relationship network visualization
+![Chord Diagram](demo/views/chords.png)
+*Visualize the intricate relationships between different aspects of your life and work.*
+
+### ⚙️ Powerful Settings & Control
+
+**Smart Tagging Configuration**
+![Tagging Settings](demo/settings/tagging.png)
+*Fine-tune AI tagging behavior with custom categories, confidence thresholds, and processing rules.*
+
+**Data Ingestion Control**
+![Ingestion Settings](demo/settings/ingestion.png)
+*Connect and configure your data sources - Google Calendar, Notion, and more - with simple, intuitive controls.*
+
+**Intelligent Cleanup Tools**
+![Cleanup Settings](demo/settings/cleanup.png)
+*Keep your data organized with AI-powered cleanup suggestions and automated maintenance tasks.*
+
+---
+
+## 🚀 What Makes SmartHistory Special?
+
+### 🤖 AI-Powered Intelligence
+- **Smart Categorization**: Automatically categorizes activities using advanced AI
+- **Context-Aware Tagging**: Enriches calendar events with relevant information from your notes
+- **Pattern Recognition**: Discovers hidden patterns and relationships in your data
+
+### 📊 Beautiful Visualizations
+- **Multiple Perspectives**: View your data through different lenses - timeline, galaxy, river, and more
+- **Interactive Exploration**: Drill down into specific time periods, categories, or relationships
+- **Real-time Updates**: See changes instantly as you modify your calendar or notes
+
+### 🔗 Seamless Integration
+- **Google Calendar**: Full integration with your existing calendar
+- **Notion Workspace**: Enriches events with context from your notes and projects
+- **Extensible Architecture**: Easy to add new data sources
+
+### 🎨 Modern Experience
+- **Responsive Design**: Works beautifully on desktop, tablet, and mobile
+- **Dark/Light Themes**: Choose your preferred visual experience
+- **Professional UI**: Built with modern design principles for clarity and usability
+
+---
+
+## 🏁 Quick Start
+
+Ready to explore your activity data? Check out our [Setup Guide](SETUP.md) for detailed installation and configuration instructions.
+
 ```bash
-# Backend deps
-python -m venv venv && source venv/bin/activate
-pip install -r src/backend/requirements.txt
-
-# Frontend deps
-cd src/frontend && npm ci && cd -
-```
-
-Environment:
-- Backend dev env file: `src/backend/.env.development` (provided). Adjust `CORS_ORIGINS` if needed.
-
-Run:
-```bash
-# Unified dev servers (backend + frontend)
+# Quick start (after setup)
 ./runner/deploy.sh local
 
-# Or start individually
-python src/backend/start.py development
-cd src/frontend && npm run dev
+# Access the app
+open http://localhost:3000
 ```
 
-Access the app at: `http://localhost:3000`
-
-## 📁 Project Structure
-
-```
-smartHistory/
-├── runner/              # Scripts to run services
-│   ├── deploy.sh        # Unified deployment script
-│   ├── run_agent.py     # AI agent processing
-│   ├── run_api.py       # API server
-│   ├── run_parsers.py   # Data parsers
-│   └── setup_api.py     # API setup
-│
-├── META/                # Project documentation
-│   ├── README.md        # Detailed project information
-│   ├── DESIGN.md        # Architecture design
-│   ├── REGULATION.md    # Development guidelines
-│   ├── PROGRESS.md      # Development progress
-│   └── *.md            # Other documentation
-│
-├── deployment/          # Deployment configurations
-│   ├── DEPLOYMENT.md    # Deployment guide
-│   ├── docker-compose.yml # Local Docker setup
-│   ├── Dockerfile.*     # Container definitions
-│   ├── aws/            # AWS deployment configs
-│   └── nginx.conf      # Reverse proxy config
-│
-├── src/                # Source code
-│   ├── backend/        # FastAPI backend
-│   └── frontend/       # Next.js frontend
-│
-├── tests/              # Test suites
-├── test_features/      # Feature tests
-├── .env                # Environment variables
-├── credentials.json    # Service credentials
-├── token.json         # Authentication tokens
-├── smarthistory.db    # SQLite database
-├── pytest.ini        # Test configuration
-└── src/backend/requirements.txt # Backend Python dependencies
-```
-
-## 🏃‍♂️ Runner Scripts
-
-### `./runner/deploy.sh`
-Unified helpers:
-- `local` - Start development servers (backend + frontend)
-- `docker` - Docker Compose (dev/single-host)
-
-### `./runner/run_api.py`
-Standalone API server runner with database setup.
-
-### `./runner/run_ingest.py`
-DB-only ingestion and indexing (no tagging). Useful for debugging backfill.
-- Ensures schema (migrations + column repair)
-- Ingests Google Calendar events via API (OAuth Desktop credentials)
-- Ingests Notion workspace pages/blocks via API (NOTION_API_KEY)
-- Indexes Notion abstracts + embeddings for leaf blocks
-
-Examples:
-```
-python runner/run_ingest.py --start 2025-02-01 --end 2025-09-10 --cal-ids primary
-```
-
-### `./runner/run_process_range.py`
-Processing + tagging only for a date range (no ingestion).
-- Purges processed_activities in range and re-tags with enriched context (up to 10 tags)
-- Uses date-based Notion retrieval to enrich each calendar event with relevant abstracts
-
-Examples:
-```
-python runner/run_process_range.py --start 2025-02-01 --end 2025-09-10
-python runner/run_process_range.py --start 2025-02-01 --end 2025-09-10 --regenerate-system-tags
-```
-
-### `./runner/run_build_taxonomy.py`
-Generate data-driven taxonomy and synonyms from your Calendar + Notion context using AI.
-- Produces `src/backend/agent/resources/hierarchical_taxonomy_generated.json`
-  and `src/backend/agent/resources/synonyms_generated.json`
-- TagGenerator auto-loads these files if present.
-
-Example:
-```
-python runner/run_build_taxonomy.py --start 2025-02-01 --end 2025-09-10
-```
-
-### `./runner/run_parsers.py`
-Data parsing utilities for Notion and Google Calendar.
-
-### `./runner/run_agent.py`
-AI agent for intelligent activity processing.
-
-## 📚 Documentation (META/)
-
-All project documentation is organized in the `META/` directory:
-
-- **README.md** - Comprehensive project documentation
-- **DESIGN.md** - System architecture and design decisions  
-- **REGULATION.md** - Development guidelines and standards
-- **API_QUICKSTART.md** - API usage guide
-- **DEPLOYMENT.md** - Detailed deployment instructions
-
-## 🐳 Deployment
-
-- Local dev and Docker Compose: see `deployment/DEPLOYMENT.md`.
-- GitHub Pages for frontend-only hosting is supported (static export). See `deployment/DEPLOYMENT.md`.
-
-## ⚙️ Configuration Files (Root)
-
-Core configuration files remain in the root:
-
-- `.env` - Environment variables
-- `credentials.json` - Service account credentials
-- `token.json` - API tokens
-- `smarthistory.db` - SQLite database
-- `pytest.ini` - Test configuration
-- `requirements-api.txt` - Python dependencies
-
-## 🔧 Development
-
-1. **Setup**: Copy service credentials to root directory
-2. **Backend**: `cd src/backend && python start.py development`  
-3. **Frontend**: `cd src/frontend && npm run dev`
-4. **Database**: SQLite file created automatically
+---
 
 ## 🏗️ Architecture
 
-- Backend: FastAPI with environment-based config
-- Frontend: Next.js + TypeScript + Tailwind
-- Database: SQLite for development
-- Deployment: Local/dev Docker Compose; static frontend export to GH Pages
+SmartHistory combines multiple technologies to create a comprehensive activity analytics platform:
 
-### Calendar-as-Query → Notion-as-Context (Tagging Flow)
-- Ingest Notion workspace into DB: `notion_pages`, `notion_blocks` (tree, text, is_leaf), `notion_block_edits`
-- Index leaf blocks: generate 30–100 word abstracts + embeddings for retrieval
-- At tagging time, retrieve top‑K Notion abstracts around each event date (±window) by embedding similarity
-- TagGenerator enriches event text with abstracts and selects up to 10 tags using calibrated scoring (synonyms/taxonomy/weights)
-- Persist `processed_activities` and `activity_tags` with confidence; triggers update tag usage
+- **Frontend**: Next.js + TypeScript + Tailwind CSS
+- **Backend**: FastAPI + Python
+- **AI Engine**: Advanced language models for categorization and insights
+- **Database**: SQLite for development, PostgreSQL for production
+- **Integrations**: Google Calendar API, Notion API
 
-See also:
-- `META/TAGGING_PIPELINE.md` – detailed, end‑to‑end flow and debugging tips
+---
 
-### Tagging Logs (Observability)
-- `runner/run_process_range.py` writes a JSONL log per run to `logs/`.
-- Each line records: calendar summary/details, retrieved Notion abstracts (with scores), normalized tag scores, and selected tags.
-- Example:
-```
-tail -f logs/tagging_run_2025-02-01_to_2025-09-10_*.jsonl
-```
+## 📚 Documentation
 
-## 📊 Features
+- **[Setup Guide](SETUP.md)** - Complete installation and configuration instructions
+- **[META/](META/)** - Detailed technical documentation
+- **[Deployment Guide](deployment/DEPLOYMENT.md)** - Production deployment instructions
 
-- **Multi-source parsing** (Notion, Google Calendar)
-- **AI-powered processing** for intelligent categorization
-- **Real-time dashboard** with analytics
-- **Professional UI** with responsive design
-- **Industry-ready deployment** with monitoring
-- **Cloud-native architecture** for scalability
+---
 
-For detailed information, see documentation in the `META/` directory.
+## 🤝 Contributing
+
+We welcome contributions! Please see our documentation in the `META/` directory for development guidelines and project structure details.
+
+---
+
+**Transform how you understand your time. Start with SmartHistory today.**
