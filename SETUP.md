@@ -19,7 +19,7 @@ cd smartHistory
 
 # Backend dependencies
 python -m venv venv && source venv/bin/activate
-pip install -r src/backend/requirements.txt
+pip install -r requirements.txt
 
 # Frontend dependencies
 cd src/frontend && npm ci && cd -
@@ -64,15 +64,14 @@ smartHistory/
 │   ├── deploy.sh        # Unified deployment script
 │   ├── run_agent.py     # AI agent processing
 │   ├── run_api.py       # API server
-│   ├── run_parsers.py   # Data parsers
 │   └── setup_api.py     # API setup
 │
-├── META/                # Project documentation
-│   ├── README.md        # Detailed project information
-│   ├── DESIGN.md        # Architecture design
-│   ├── REGULATION.md    # Development guidelines
-│   ├── PROGRESS.md      # Development progress
-│   └── *.md            # Other documentation
+├── META/                # Project documentation (organized)
+│   ├── core/           # Core project files
+│   ├── features/       # Feature-specific docs
+│   ├── archive/        # Historical documentation
+│   ├── proposals/      # Analysis and proposals
+│   └── README.md       # META organization guide
 │
 ├── deployment/          # Deployment configurations
 │   ├── DEPLOYMENT.md    # Deployment guide
@@ -85,14 +84,12 @@ smartHistory/
 │   ├── backend/        # FastAPI backend
 │   └── frontend/       # Next.js frontend
 │
-├── tests/              # Test suites
-├── test_features/      # Feature tests
 ├── .env                # Environment variables
 ├── credentials.json    # Service credentials
 ├── token.json         # Authentication tokens
 ├── smarthistory.db    # SQLite database
 ├── pytest.ini        # Test configuration
-└── src/backend/requirements.txt # Backend Python dependencies
+└── requirements.txt    # Python dependencies
 ```
 
 ---
@@ -390,9 +387,9 @@ python runner/run_tests.py      # Full integration test suite
 
 ## 📚 Additional Resources
 
-- **[META/DESIGN.md](META/DESIGN.md)** - System architecture details
-- **[META/REGULATION.md](META/REGULATION.md)** - Development guidelines
-- **[META/TAGGING_PIPELINE.md](META/TAGGING_PIPELINE.md)** - Detailed tagging flow
+- **[META/core/DESIGN.md](META/core/DESIGN.md)** - System architecture details
+- **[META/core/REGULATION.md](META/core/REGULATION.md)** - Development guidelines
+- **[META/features/TAGGING_PIPELINE.md](META/features/TAGGING_PIPELINE.md)** - Detailed tagging flow
 - **[deployment/DEPLOYMENT.md](deployment/DEPLOYMENT.md)** - Production deployment guide
 
 ---

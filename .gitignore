@@ -36,8 +36,6 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
-tests/backend/__pycache__/
-tests/backend/__pycache__/*
 
 # Database Files
 *.db
