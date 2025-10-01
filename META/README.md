@@ -1,41 +1,41 @@
-# Smart History
+# META Directory Organization
 
-This product will track your time. It will tell you where your hours go. It will do this automatically.
+This directory contains project documentation organized into logical categories:
 
-## What It Does
+## Directory Structure
 
-Smart History reads your calendar and notes. It finds patterns in how you spend time. It shows you data about your activities over weeks, years, decades.
+### [core/](core/)
+Core project files that are always relevant and frequently referenced:
+- META.md - Explains the META system purpose and rules
+- PRODUCT.md - Product vision & scope
+- DESIGN.md - Technical blueprint and architecture
+- REGULATION.md - Development rules and standards
+- PROGRESS.md - Chronological project log
+- TODO.md - Current task tracker
+- PRODUCT_FUTURE.md - Long-term feature roadmap
+- README.md - Core project overview
 
-The system runs daily at 2 AM. It pulls from Notion and Notion Calendar. It saves organized events to a database. You get charts and breakdowns of your time.
+### [features/](features/)
+Feature-specific documentation for current or active development:
+- Tagging system documentation
+- Frontend update plans
+- Agent design specifications
+- Branch-specific META files
 
-## Current Status
+### [archive/](archive/)
+Completed milestones and historical documentation:
+- MILESTONE_2.md - Completed milestone documentation
 
-**Under Development**
+### [proposals/](proposals/)
+Analysis documents, proposals, and diagnostic reports:
+- CODEBASE_REVIEW_PROPOSAL.md - Code review analysis
+- API_Diagnosis.md - API diagnostic report
 
-I am building the MVP. The core features work in development. The product is not ready for users.
+## Usage Guidelines
 
-## Target Users
+1. **Core files** should be consulted for any development work
+2. **Feature files** are relevant when working on specific features
+3. **Archive files** provide historical context but don't affect current work
+4. **Proposal files** contain analysis and recommendations for reference
 
-People who want to understand their time patterns. People who use Notion for planning. People who value data-driven insights about their daily habits.
-
-## Value Proposition
-
-Most people cannot tell you how they spent last month. This product can. It turns scattered calendar entries and notes into clear time reports.
-
-## Technical Overview
-
-- Daily automated data collection from Notion/Calendar
-- AI-powered activity detection and categorization  
-- Database storage for historical analysis
-- Frontend dashboard with trend charts and breakdowns
-- Time range filtering for flexible reporting
-
-## Status Update
-
-The system architecture is defined. Core parsing components exist. Database design is complete. Frontend development is next.
-
-This is an active project. Features change weekly. Documentation updates with each sprint.
-
----
-
-*Note: This product focuses on personal time tracking only. No team collaboration features planned for MVP.*
+For questions about the META system, always start with `core/META.md`.
