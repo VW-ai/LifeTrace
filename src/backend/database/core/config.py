@@ -14,9 +14,9 @@ from dataclasses import dataclass
 @dataclass
 class ConnectionConfig:
     """Database connection configuration with validation."""
-    
+
     # Connection settings
-    db_path: str = os.getenv('SMARTHISTORY_DB_PATH', 'smarthistory.db')
+    db_path: str = None
     timeout: float = 30.0
     check_same_thread: bool = False
     isolation_level: Optional[str] = None  # autocommit mode
@@ -26,8 +26,21 @@ class ConnectionConfig:
     
     def __post_init__(self):
         """Validate configuration and ensure database directory exists."""
+        if self.db_path is None:
+            self._parse_database_url()
         self._validate_config()
         self._ensure_directory_exists()
+
+    def _parse_database_url(self) -> None:
+        """Parse DATABASE_URL environment variable."""
+        database_url = os.getenv('DATABASE_URL', 'sqlite:///./smarthistory.db')
+
+        if database_url.startswith('sqlite:///'):
+            # Remove sqlite:/// prefix
+            self.db_path = database_url[10:]
+        else:
+            # Fallback for other database types or malformed URLs
+            self.db_path = 'smarthistory.db'
     
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
