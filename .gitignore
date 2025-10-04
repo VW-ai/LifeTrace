@@ -22,7 +22,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+**/site-packages/
+**/lib/python*/
 lib64/
 parts/
 sdist/
