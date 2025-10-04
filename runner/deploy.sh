@@ -42,17 +42,18 @@ check_dependencies() {
 # Deploy locally
 deploy_local() {
     log_info "Deploying SmartHistory locally..."
-    
+
     # Start backend
-    cd ../src/backend
     log_info "Starting backend server..."
+    cd src/backend || { log_error "Failed to change to backend directory from $(pwd)"; exit 1; }
+    source ../../venv/bin/activate
     python start.py development &
     BACKEND_PID=$!
     cd ../../
-    
+
     # Start frontend
-    cd src/frontend
     log_info "Starting frontend server..."
+    cd src/frontend || { log_error "Failed to change to frontend directory"; exit 1; }
     npm run dev &
     FRONTEND_PID=$!
     cd ../../
