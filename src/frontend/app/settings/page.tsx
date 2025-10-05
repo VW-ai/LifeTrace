@@ -8,11 +8,13 @@ import { DataIngestionSettings } from "../../components/settings/data-ingestion-
 import { TagGenerationSettings } from "../../components/settings/tag-generation-settings"
 import { TagCleanupSettings } from "../../components/settings/tag-cleanup-settings"
 import { ProcessingLogs } from "../../components/settings/processing-logs"
+import { ApiConfigurationSettings } from "../../components/settings/api-configuration-settings"
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<string>("ingestion")
 
   const sections = [
+    { id: "config", label: "API Configuration", description: "Configure connections" },
     { id: "ingestion", label: "Data Ingestion", description: "Import Data" },
     { id: "generation", label: "Tag Generation", description: "Process activities and generate tags" },
     { id: "cleanup", label: "Tag Cleanup", description: "Clean up and merge tags" },
@@ -21,6 +23,8 @@ export default function SettingsPage() {
 
   const renderActiveSection = () => {
     switch (activeSection) {
+      case "config":
+        return <ApiConfigurationSettings />
       case "ingestion":
         return <DataIngestionSettings />
       case "generation":
@@ -30,7 +34,7 @@ export default function SettingsPage() {
       case "logs":
         return <ProcessingLogs />
       default:
-        return <DataIngestionSettings />
+        return <ApiConfigurationSettings />
     }
   }
 

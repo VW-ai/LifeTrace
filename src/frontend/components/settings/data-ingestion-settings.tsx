@@ -33,6 +33,11 @@ export function DataIngestionSettings() {
     calendar: false,
     notion: false,
   })
+  const [backfillMonths, setBackfillMonths] = useState(7)
+  const [isBackfilling, setIsBackfilling] = useState(false)
+  const [notionIndexScope, setNotionIndexScope] = useState<'all' | 'recent'>('recent')
+  const [notionIndexHours, setNotionIndexHours] = useState(24)
+  const [isIndexing, setIsIndexing] = useState(false)
 
   const loadImportStatus = async () => {
     try {
@@ -80,6 +85,33 @@ export function DataIngestionSettings() {
       toast.error("Notion import failed")
     } finally {
       setImporting(prev => ({ ...prev, notion: false }))
+    }
+  }
+
+  const handleBackfillCalendar = async () => {
+    try {
+      setIsBackfilling(true)
+      const result = await apiClient.backfillCalendar(backfillMonths)
+      toast.success(`Calendar backfill completed: ${result.imported_count} events imported from ${result.date_range.start} to ${result.date_range.end}`)
+      await loadImportStatus()
+    } catch (error) {
+      console.error('Calendar backfill failed:', error)
+      toast.error("Calendar backfill failed")
+    } finally {
+      setIsBackfilling(false)
+    }
+  }
+
+  const handleIndexNotion = async () => {
+    try {
+      setIsIndexing(true)
+      const result = await apiClient.indexNotionBlocks(notionIndexScope, notionIndexHours)
+      toast.success(`Notion indexing completed: ${result.indexed_count} blocks indexed`)
+    } catch (error) {
+      console.error('Notion indexing failed:', error)
+      toast.error("Notion indexing failed")
+    } finally {
+      setIsIndexing(false)
     }
   }
 
@@ -274,6 +306,133 @@ export function DataIngestionSettings() {
               </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Calendar Backfill */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Calendar Backfill
+          </CardTitle>
+          <CardDescription>
+            Backfill historical calendar events for a specified number of months
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="backfill-months">Number of Months</Label>
+              <Input
+                id="backfill-months"
+                type="number"
+                min="1"
+                max="24"
+                value={backfillMonths}
+                onChange={(e) => setBackfillMonths(parseInt(e.target.value) || 7)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Backfill the last {backfillMonths} months of calendar events (max 24 months)
+              </p>
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleBackfillCalendar}
+                disabled={isBackfilling}
+                variant="outline"
+                className="w-full"
+              >
+                {isBackfilling ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Backfilling...
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Backfill {backfillMonths} Months
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notion Indexing */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Notion Block Indexing
+          </CardTitle>
+          <CardDescription>
+            Generate abstracts and embeddings for Notion blocks to enable semantic search
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Index Scope</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={notionIndexScope === 'recent' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNotionIndexScope('recent')}
+                  className="flex-1"
+                >
+                  Recent
+                </Button>
+                <Button
+                  variant={notionIndexScope === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNotionIndexScope('all')}
+                  className="flex-1"
+                >
+                  All
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="index-hours">Hours (for Recent)</Label>
+              <Input
+                id="index-hours"
+                type="number"
+                min="1"
+                max="2160"
+                value={notionIndexHours}
+                onChange={(e) => setNotionIndexHours(parseInt(e.target.value) || 24)}
+                disabled={notionIndexScope === 'all'}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleIndexNotion}
+                disabled={isIndexing}
+                variant="outline"
+                className="w-full"
+              >
+                {isIndexing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Indexing...
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    Index Blocks
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {notionIndexScope === 'all'
+              ? 'Index all Notion blocks in the database'
+              : `Index Notion blocks modified in the last ${notionIndexHours} hours`}
+          </p>
         </CardContent>
       </Card>
 

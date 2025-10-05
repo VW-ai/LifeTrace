@@ -483,6 +483,101 @@ export class ApiClient {
       }
     }>(`/api/v1/processing/logs${query ? `?${query}` : ""}`)
   }
+
+  // Management endpoints
+  async backfillCalendar(months: number = 7) {
+    return this.request<{
+      status: string
+      message: string
+      imported_count: number
+      date_range: {
+        start: string
+        end: string
+      }
+    }>(`/api/v1/management/backfill-calendar?months=${months}`, {
+      method: 'POST'
+    })
+  }
+
+  async indexNotionBlocks(scope: 'all' | 'recent' = 'all', hours: number = 24) {
+    return this.request<{
+      status: string
+      message: string
+      indexed_count: number
+      scope: string
+    }>(`/api/v1/management/index-notion?scope=${scope}&hours=${hours}`, {
+      method: 'POST'
+    })
+  }
+
+  async reprocessDateRange(params: {
+    date_start: string
+    date_end: string
+    regenerate_system_tags?: boolean
+  }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('date_start', params.date_start)
+    searchParams.set('date_end', params.date_end)
+    if (params.regenerate_system_tags) {
+      searchParams.set('regenerate_system_tags', 'true')
+    }
+
+    return this.request<{
+      status: string
+      message: string
+      reprocessed_count: number
+      date_range: {
+        start: string
+        end: string
+      }
+    }>(`/api/v1/management/reprocess-range?${searchParams.toString()}`, {
+      method: 'POST'
+    })
+  }
+
+  // System health and configuration
+  async getSystemHealth() {
+    return this.request<{
+      status: string
+      database: {
+        connected: boolean
+        type: string
+      }
+      apis: {
+        notion: {
+          configured: boolean
+          connected: boolean
+        }
+        google_calendar: {
+          configured: boolean
+          connected: boolean
+        }
+      }
+      timestamp: string
+    }>('/api/v1/system/health')
+  }
+
+  async getSystemStats() {
+    return this.request<{
+      database: {
+        raw_activities_count: number
+        processed_activities_count: number
+        tags_count: number
+        notion_pages_count: number
+        notion_blocks_count: number
+      }
+      date_ranges: {
+        raw_activities: {
+          earliest: string | null
+          latest: string | null
+        }
+        processed_activities: {
+          earliest: string | null
+          latest: string | null
+        }
+      }
+    }>('/api/v1/system/stats')
+  }
 }
 
 // Export singleton instance
