@@ -53,6 +53,14 @@ export function TagGenerationSettings() {
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false)
   const [isBuildingTaxonomy, setIsBuildingTaxonomy] = useState(false)
+  const [isReprocessing, setIsReprocessing] = useState(false)
+
+  // Reprocess parameters
+  const [reprocessParams, setReprocessParams] = useState({
+    date_start: "",
+    date_end: "",
+    regenerate_system_tags: false,
+  })
 
   const loadProcessingHistory = async () => {
     try {
@@ -95,6 +103,12 @@ export function TagGenerationSettings() {
     start.setDate(start.getDate() - 30)
 
     setTaxonomyParams(prev => ({
+      ...prev,
+      date_start: start.toISOString().split('T')[0],
+      date_end: end.toISOString().split('T')[0],
+    }))
+
+    setReprocessParams(prev => ({
       ...prev,
       date_start: start.toISOString().split('T')[0],
       date_end: end.toISOString().split('T')[0],
@@ -158,6 +172,26 @@ export function TagGenerationSettings() {
       toast.error("Failed to build taxonomy")
     } finally {
       setIsBuildingTaxonomy(false)
+    }
+  }
+
+  const handleReprocessRange = async () => {
+    try {
+      setIsReprocessing(true)
+      const result = await apiClient.reprocessDateRange({
+        date_start: reprocessParams.date_start,
+        date_end: reprocessParams.date_end,
+        regenerate_system_tags: reprocessParams.regenerate_system_tags,
+      })
+
+      toast.success(`Reprocessing completed: ${result.reprocessed_count} activities reprocessed from ${result.date_range.start} to ${result.date_range.end}`)
+      await loadProcessingHistory()
+
+    } catch (error) {
+      console.error('Failed to reprocess date range:', error)
+      toast.error("Failed to reprocess activities")
+    } finally {
+      setIsReprocessing(false)
     }
   }
 
@@ -357,6 +391,78 @@ export function TagGenerationSettings() {
               <>
                 <Database className="h-4 w-4 mr-2" />
                 Build Taxonomy
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Reprocess Date Range */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Reprocess Date Range
+          </CardTitle>
+          <CardDescription>
+            Purge and regenerate tags for activities within a specific date range. Use for fixing tagging issues or applying new taxonomy.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="reprocess-start-date">Start Date</Label>
+              <Input
+                id="reprocess-start-date"
+                type="date"
+                value={reprocessParams.date_start}
+                onChange={(e) =>
+                  setReprocessParams(prev => ({ ...prev, date_start: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reprocess-end-date">End Date</Label>
+              <Input
+                id="reprocess-end-date"
+                type="date"
+                value={reprocessParams.date_end}
+                onChange={(e) =>
+                  setReprocessParams(prev => ({ ...prev, date_end: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="reprocess-regen-tags">Regenerate System Tags</Label>
+              <p className="text-xs text-muted-foreground">Force regeneration of all system tags for the date range</p>
+            </div>
+            <Switch
+              id="reprocess-regen-tags"
+              checked={reprocessParams.regenerate_system_tags}
+              onCheckedChange={(checked) =>
+                setReprocessParams(prev => ({ ...prev, regenerate_system_tags: checked }))
+              }
+            />
+          </div>
+
+          <Button
+            onClick={handleReprocessRange}
+            disabled={isReprocessing || !reprocessParams.date_start || !reprocessParams.date_end}
+            variant="outline"
+            className="w-full"
+          >
+            {isReprocessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Reprocessing...
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4 mr-2" />
+                Reprocess Date Range
               </>
             )}
           </Button>

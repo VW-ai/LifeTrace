@@ -1,85 +1,50 @@
 {
-  "meetings": [
-    "calls",
-    "standup",
-    "sync",
-    "conference",
-    "weekly_checkin"
+  "Running": [
+    "Jogging",
+    "Sprinting",
+    "Distance Running",
+    "Trail Running"
   ],
-  "coding": [
-    "programming",
-    "development",
-    "software_build"
+  "Yoga": [
+    "Asana Practice",
+    "Hatha Yoga",
+    "Vinyasa",
+    "Meditative Movement"
   ],
-  "debugging": [
-    "troubleshooting",
-    "issue_resolution"
+  "Meditation": [
+    "Mindfulness Practice",
+    "Focused Breathing",
+    "Zen Meditation",
+    "Guided Meditation"
   ],
-  "application": [
-    "job_application",
-    "internship_application"
+  "Parties": [
+    "Social Gatherings",
+    "Celebrations",
+    "Get-Togethers",
+    "Events"
   ],
-  "project_management": [
-    "project_planning",
-    "task_management"
+  "Video Calls": [
+    "Virtual Meetings",
+    "Online Conferencing",
+    "FaceTime",
+    "Zoom Calls"
   ],
-  "interviews": [
-    "job_interview",
-    "candidate_interview"
+  "Reading": [
+    "Book Reading",
+    "Literature Consumption",
+    "Novel Enjoyment",
+    "Text Engagement"
   ],
-  "planning": [
-    "scheduling",
-    "organizing"
+  "Painting": [
+    "Art Creation",
+    "Canvas Work",
+    "Visual Art",
+    "Coloring"
   ],
-  "exercise": [
-    "workout",
-    "gym",
-    "fitness"
-  ],
-  "meals": [
-    "dinner",
-    "lunch",
-    "breakfast"
-  ],
-  "acupuncture": [
-    "therapy",
-    "treatment"
-  ],
-  "rest": [
-    "nap",
-    "break",
-    "relaxation"
-  ],
-  "family_time": [
-    "family_gathering",
-    "family_activity"
-  ],
-  "socializing": [
-    "hanging_out",
-    "going_out"
-  ],
-  "errands": [
-    "grocery_shopping",
-    "picking_up"
-  ],
-  "journaling": [
-    "diary",
-    "logging"
-  ],
-  "travel_planning": [
-    "trip_planning",
-    "itinerary"
-  ],
-  "course_selection": [
-    "class_registration",
-    "enrollment"
-  ],
-  "assignments": [
-    "homework",
-    "projects"
-  ],
-  "study_sessions": [
-    "study_group",
-    "revision"
+  "Travel": [
+    "Journeying",
+    "Exploration",
+    "Voyaging",
+    "Excursion"
   ]
 }

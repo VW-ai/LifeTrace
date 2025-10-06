@@ -334,6 +334,14 @@ def create_app() -> FastAPI:
         """Get processing job history."""
         return await processing_service.get_processing_history(limit=limit)
 
+    @app.get(f"{API_V1_PREFIX}/process/progress/{{job_id}}")
+    async def get_processing_progress(
+        job_id: str,
+        processing_service: ProcessingService = Depends(get_processing_service)
+    ):
+        """Get real-time progress for a processing job."""
+        return await processing_service.get_processing_progress(job_id)
+
     # Import Endpoints
     @app.post(f"{API_V1_PREFIX}/import/calendar")
     async def import_calendar_data(
@@ -454,6 +462,23 @@ def create_app() -> FastAPI:
     ):
         """Retrieve top-K Notion contexts around the specified date."""
         return await system_service.get_notion_context_by_date(query=query, date=date, window_days=windowDays, k=k)
+
+    # Configuration endpoints
+    @app.post(f"{API_V1_PREFIX}/config/api", response_model=ApiConfigurationResponse)
+    async def update_api_configuration(
+        config_request: ApiConfigurationRequest,
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Update API configuration (API keys, models, etc.)."""
+        return await system_service.update_api_configuration(config_request)
+
+    @app.post(f"{API_V1_PREFIX}/config/test", response_model=TestApiConnectionResponse)
+    async def test_api_connection(
+        test_request: TestApiConnectionRequest,
+        system_service: SystemService = Depends(get_system_service)
+    ):
+        """Test API connection with provided or configured credentials."""
+        return await system_service.test_api_connection(test_request)
 
     return app
 

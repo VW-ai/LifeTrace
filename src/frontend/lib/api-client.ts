@@ -396,6 +396,20 @@ export class ApiClient {
     }>>(`/api/v1/process/history?limit=${limit}`)
   }
 
+  async getProcessingProgress(jobId: string) {
+    return this.request<{
+      job_id: string
+      status: string
+      activity_index: number
+      total_activities: number
+      current_activity: string
+      current_tags: string[]
+      progress: number
+      error?: string
+      report?: any
+    }>(`/api/v1/process/progress/${jobId}`)
+  }
+
   async buildTaxonomy(params: {
     date_start?: string
     date_end?: string
@@ -482,6 +496,139 @@ export class ApiClient {
         has_more: boolean
       }
     }>(`/api/v1/processing/logs${query ? `?${query}` : ""}`)
+  }
+
+  // Management endpoints
+  async backfillCalendar(months: number = 7) {
+    return this.request<{
+      status: string
+      message: string
+      imported_count: number
+      date_range: {
+        start: string
+        end: string
+      }
+    }>(`/api/v1/management/backfill-calendar?months=${months}`, {
+      method: 'POST'
+    })
+  }
+
+  async indexNotionBlocks(scope: 'all' | 'recent' = 'all', hours: number = 24) {
+    return this.request<{
+      status: string
+      message: string
+      indexed_count: number
+      scope: string
+    }>(`/api/v1/management/index-notion?scope=${scope}&hours=${hours}`, {
+      method: 'POST'
+    })
+  }
+
+  async reprocessDateRange(params: {
+    date_start: string
+    date_end: string
+    regenerate_system_tags?: boolean
+  }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('date_start', params.date_start)
+    searchParams.set('date_end', params.date_end)
+    if (params.regenerate_system_tags) {
+      searchParams.set('regenerate_system_tags', 'true')
+    }
+
+    return this.request<{
+      status: string
+      message: string
+      reprocessed_count: number
+      date_range: {
+        start: string
+        end: string
+      }
+    }>(`/api/v1/management/reprocess-range?${searchParams.toString()}`, {
+      method: 'POST'
+    })
+  }
+
+  // System health and configuration
+  async getSystemHealth() {
+    return this.request<{
+      status: string
+      database: {
+        connected: boolean
+        type: string
+      }
+      apis: {
+        notion: {
+          configured: boolean
+          connected: boolean
+        }
+        google_calendar: {
+          configured: boolean
+          connected: boolean
+        }
+        openai: {
+          configured: boolean
+          connected: boolean
+        }
+      }
+      timestamp: string
+    }>('/api/v1/system/health')
+  }
+
+  async getSystemStats() {
+    return this.request<{
+      database: {
+        raw_activities_count: number
+        processed_activities_count: number
+        tags_count: number
+        notion_pages_count: number
+        notion_blocks_count: number
+      }
+      date_ranges: {
+        raw_activities: {
+          earliest: string | null
+          latest: string | null
+        }
+        processed_activities: {
+          earliest: string | null
+          latest: string | null
+        }
+      }
+    }>('/api/v1/system/stats')
+  }
+
+  // Configuration endpoints
+  async updateApiConfiguration(config: {
+    notion_api_key?: string
+    openai_api_key?: string
+    openai_model?: string
+    openai_embed_model?: string
+    google_calendar_key?: string
+  }) {
+    return this.request<{
+      status: string
+      message: string
+      updated_keys: string[]
+      restart_required: boolean
+    }>('/api/v1/config/api', {
+      method: 'POST',
+      body: JSON.stringify(config)
+    })
+  }
+
+  async testApiConnection(params: {
+    api_type: 'notion' | 'openai' | 'google_calendar'
+    api_key?: string
+  }) {
+    return this.request<{
+      api_type: string
+      success: boolean
+      message: string
+      details?: Record<string, any>
+    }>('/api/v1/config/test', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    })
   }
 }
 

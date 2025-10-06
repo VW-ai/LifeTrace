@@ -248,6 +248,7 @@ class ProcessingResponse(BaseModel):
     """Response from processing operation."""
     status: str
     job_id: str
+    message: Optional[str] = None
     processed_counts: ProcessingCounts
     tag_analysis: TagAnalysis
 
@@ -314,32 +315,87 @@ class ProcessingLogsResponse(BaseModel):
 class DatabaseHealth(BaseModel):
     """Database health information."""
     connected: bool
-    total_activities: int
-    last_updated: datetime
+    type: str  # 'sqlite', 'postgresql', etc.
 
 
-class ServiceHealth(BaseModel):
-    """Service health status."""
-    tag_generator: str
-    activity_matcher: str
+class ApiStatus(BaseModel):
+    """API connection status."""
+    configured: bool
+    connected: bool
+
+
+class ApiConnectionsHealth(BaseModel):
+    """External API connections health."""
+    notion: ApiStatus
+    google_calendar: ApiStatus
+    openai: ApiStatus
 
 
 class SystemHealthResponse(BaseModel):
     """System health overview."""
     status: str  # 'healthy', 'degraded', 'down'
     database: DatabaseHealth
-    services: ServiceHealth
+    apis: ApiConnectionsHealth
+    timestamp: str
+
+
+class DatabaseStats(BaseModel):
+    """Database statistics."""
+    raw_activities_count: int
+    processed_activities_count: int
+    tags_count: int
+    notion_pages_count: int
+    notion_blocks_count: int
+
+
+class DateRangeInfo(BaseModel):
+    """Date range information."""
+    earliest: Optional[str] = None
+    latest: Optional[str] = None
+
+
+class DateRanges(BaseModel):
+    """Date ranges for various data types."""
+    raw_activities: DateRangeInfo
+    processed_activities: DateRangeInfo
 
 
 class SystemStatsResponse(BaseModel):
     """System statistics."""
-    total_raw_activities: int
-    total_processed_activities: int
-    total_tags: int
-    total_sessions: int
-    database_size_mb: float
-    last_processing_run: Optional[datetime] = None
-    uptime_seconds: int
+    database: DatabaseStats
+    date_ranges: DateRanges
+
+
+# Configuration Models
+class ApiConfigurationRequest(BaseModel):
+    """Request to update API configuration."""
+    notion_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    openai_model: Optional[str] = None
+    openai_embed_model: Optional[str] = None
+    google_calendar_key: Optional[str] = None
+
+
+class ApiConfigurationResponse(BaseModel):
+    """Response after updating API configuration."""
+    status: str
+    message: str
+    updated_keys: List[str]
+    restart_required: bool
+
+
+class TestApiConnectionRequest(BaseModel):
+    """Request to test an API connection."""
+    api_type: str  # 'notion', 'openai', 'google_calendar'
+    api_key: Optional[str] = None  # If provided, test with this key instead of configured one
+
+
+class TestApiConnectionResponse(BaseModel):
+    """Response from API connection test."""
+    api_type: str
+    success: bool
+    message: str
+    details: Optional[Dict[str, Any]] = None
 
 
 # Error Models

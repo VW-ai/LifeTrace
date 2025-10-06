@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime
 from .data_consumer import DataConsumer
 from ..tools.tag_generator import TagGenerator
@@ -18,14 +18,15 @@ class ActivityProcessor:
         # Configuration
         self.enable_system_tag_regeneration = True
         
-    def process_daily_activities(self, 
+    def process_daily_activities(self,
                                notion_file: str = None,
                                calendar_file: str = None,
                                output_raw_file: str = None,
                                output_processed_file: str = None,
                                use_database: bool = True,
                                date_start: str = None,
-                               date_end: str = None) -> Dict[str, Any]:
+                               date_end: str = None,
+                               progress_callback: Optional[Callable[[int, int, str, List[str]], None]] = None) -> Dict[str, Any]:
         """Main entry point for daily activity processing (now database-first)."""
         
         print("=== Starting Daily Activity Processing ===")
@@ -84,11 +85,16 @@ class ActivityProcessor:
         # Step 7: Generate tags for each activity
         print("\n4. Generating tags for activities...")
         tagged_activities = []
-        
+        total_activities = len(matched_activities)
+
         for i, activity in enumerate(matched_activities):
             try:
+                # Call progress callback BEFORE generating tags (with empty tags)
+                if progress_callback:
+                    progress_callback(i + 1, total_activities, activity.details, [])
+
                 tags = self.tag_generator.generate_tags_for_activity(activity)
-                
+
                 # Create a copy with tags added to raw_data for tracking
                 tagged_activity = RawActivity(
                     date=activity.date,
@@ -100,12 +106,19 @@ class ActivityProcessor:
                     raw_data={**activity.raw_data, 'tags': tags}
                 )
                 tagged_activities.append(tagged_activity)
-                
+
+                # Call progress callback AFTER generating tags (with actual tags)
+                if progress_callback:
+                    progress_callback(i + 1, total_activities, activity.details, tags)
+
                 if i % 50 == 0:  # Progress update every 50 items
                     print(f"  Processed {i}/{len(matched_activities)} activities")
-                    
+
             except Exception as e:
                 print(f"Error processing activity {i}: {e}")
+                # Still call progress callback on error
+                if progress_callback:
+                    progress_callback(i + 1, total_activities, activity.details, [])
                 continue
         
         print(f"  Tag generation complete: {len(tagged_activities)} activities tagged")

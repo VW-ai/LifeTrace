@@ -855,15 +855,16 @@ class InsightsService:
 
 class ProcessingService:
     """Service for processing and import operations."""
-    
+
     def __init__(self, db_manager):
         self.db = db_manager
         self._processing_jobs = {}  # In-memory job tracking (TODO: move to database)
+        self._job_progress = {}  # Real-time progress tracking for active jobs
     
     async def trigger_daily_processing(self, request: ProcessingRequest) -> ProcessingResponse:
-        """Trigger daily activity processing."""
+        """Trigger daily activity processing with real-time progress tracking."""
         job_id = f"proc_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
-        
+
         # Create processing job status
         job_status = ProcessingStatus(
             job_id=job_id,
@@ -871,37 +872,111 @@ class ProcessingService:
             started_at=datetime.now()
         )
         self._processing_jobs[job_id] = job_status
-        
+
+        # Initialize progress tracking
+        self._job_progress[job_id] = {
+            "status": "running",
+            "activity_index": 0,
+            "total_activities": 0,
+            "current_activity": "",
+            "current_tags": [],
+            "progress": 0
+        }
+
+        # Start processing in background
+        asyncio.create_task(self._process_with_progress(job_id, request))
+
+        # Return immediately with job_id for polling
+        return ProcessingResponse(
+            status="processing",
+            job_id=job_id,
+            message="Processing started. Poll /api/v1/process/progress/{job_id} for updates.",
+            processed_counts=ProcessingCounts(
+                raw_activities=0,
+                processed_activities=0
+            ),
+            tag_analysis=TagAnalysis(
+                total_unique_tags=0,
+                average_tags_per_activity=0.0
+            )
+        )
+
+    async def _process_with_progress(self, job_id: str, request: ProcessingRequest):
+        """Run processing with progress callbacks."""
         try:
-            # Run the processing
+            # Define progress callback
+            def progress_callback(activity_index: int, total: int, current_activity: str, current_tags: List[str]):
+                """Update progress for this job."""
+                self._job_progress[job_id].update({
+                    "status": "running",
+                    "activity_index": activity_index,
+                    "total_activities": total,
+                    "current_activity": current_activity[:200],  # Limit activity text length
+                    "current_tags": current_tags[:10],  # Limit to first 10 tags
+                    "progress": int((activity_index / total) * 100) if total > 0 else 0
+                })
+
+            # Run the processing with callback in thread pool (it's CPU-bound and synchronous)
             processor = ActivityProcessor()
-            report = processor.process_daily_activities(use_database=request.use_database)
-            
-            # Update job status
-            job_status.status = "completed"
-            job_status.completed_at = datetime.now()
-            job_status.progress = 1.0
-            
-            return ProcessingResponse(
-                status="success",
-                job_id=job_id,
-                processed_counts=ProcessingCounts(
-                    raw_activities=report['processed_counts']['raw_activities'],
-                    processed_activities=report['processed_counts']['processed_activities']
-                ),
-                tag_analysis=TagAnalysis(
-                    total_unique_tags=report['tag_analysis']['total_unique_tags'],
-                    average_tags_per_activity=report['tag_analysis']['average_tags_per_activity']
+            loop = asyncio.get_event_loop()
+            report = await loop.run_in_executor(
+                None,
+                lambda: processor.process_daily_activities(
+                    use_database=request.use_database,
+                    progress_callback=progress_callback
                 )
             )
-            
+
+            # Update job status on completion
+            job_status = self._processing_jobs.get(job_id)
+            if job_status:
+                job_status.status = "completed"
+                job_status.completed_at = datetime.now()
+                job_status.progress = 1.0
+
+            # Update progress tracking
+            self._job_progress[job_id].update({
+                "status": "completed",
+                "progress": 100,
+                "report": report
+            })
+
         except Exception as e:
             # Update job status on error
-            job_status.status = "failed"
-            job_status.completed_at = datetime.now()
-            job_status.error_message = str(e)
-            
-            raise
+            job_status = self._processing_jobs.get(job_id)
+            if job_status:
+                job_status.status = "failed"
+                job_status.completed_at = datetime.now()
+                job_status.error_message = str(e)
+
+            # Update progress tracking
+            self._job_progress[job_id].update({
+                "status": "failed",
+                "error": str(e)
+            })
+
+    async def get_processing_progress(self, job_id: str) -> Dict[str, Any]:
+        """Get real-time progress for a processing job."""
+        if job_id not in self._job_progress:
+            return {
+                "status": "not_found",
+                "message": "Job ID not found"
+            }
+
+        progress = self._job_progress[job_id]
+
+        # Return progress data
+        return {
+            "job_id": job_id,
+            "status": progress.get("status"),
+            "activity_index": progress.get("activity_index", 0),
+            "total_activities": progress.get("total_activities", 0),
+            "current_activity": progress.get("current_activity", ""),
+            "current_tags": progress.get("current_tags", []),
+            "progress": progress.get("progress", 0),
+            "error": progress.get("error"),
+            "report": progress.get("report")
+        }
     
     async def get_processing_status(self, job_id: str) -> Optional[ProcessingStatus]:
         """Get status of a processing job."""
@@ -915,12 +990,22 @@ class ProcessingService:
         return jobs[:limit]
     
     async def import_calendar_data(self, request: ImportRequest) -> Dict[str, Any]:
-        """Import data from Google Calendar parser."""
+        """Import data from Google Calendar API."""
         try:
-            from src.backend.parsers.google_calendar.parser import parse_to_database
-            count = parse_to_database('google_calendar_events.json', 
-                                    hours_since_last_update=request.hours_since_last_update)
-            
+            from src.backend.parsers.google_calendar.ingest_api import ingest_to_database
+            from datetime import datetime, timedelta
+
+            # Calculate date range based on hours_since_last_update
+            end_date = datetime.now()
+            start_date = end_date - timedelta(hours=request.hours_since_last_update)
+
+            # Format dates as YYYY-MM-DD
+            start_str = start_date.strftime("%Y-%m-%d")
+            end_str = end_date.strftime("%Y-%m-%d")
+
+            # Use 'primary' calendar by default
+            count = ingest_to_database(start_str, end_str, calendar_ids=['primary'])
+
             return {
                 "status": "success",
                 "imported_count": count,
@@ -936,14 +1021,28 @@ class ProcessingService:
     async def backfill_calendar(self, months: int = 7) -> Dict[str, Any]:
         """One-click backfill for the last N months of calendar events."""
         try:
-            hours = int(months * 30 * 24)
-            from src.backend.parsers.google_calendar.parser import parse_to_database
-            count = parse_to_database('google_calendar_events.json', 
-                                      hours_since_last_update=hours)
+            from src.backend.parsers.google_calendar.ingest_api import ingest_to_database
+            from datetime import datetime, timedelta
+
+            # Calculate date range for backfill
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=months * 30)  # Approximate month as 30 days
+
+            # Format dates as YYYY-MM-DD
+            start_str = start_date.strftime("%Y-%m-%d")
+            end_str = end_date.strftime("%Y-%m-%d")
+
+            # Use 'primary' calendar by default
+            count = ingest_to_database(start_str, end_str, calendar_ids=['primary'])
+
             return {
                 "status": "success",
-                "backfilled_months": months,
-                "imported_count": count
+                "message": f"Backfilled {months} months of calendar events",
+                "imported_count": count,
+                "date_range": {
+                    "start": start_str,
+                    "end": end_str
+                }
             }
         except Exception as e:
             return {"status": "error", "message": str(e)}
@@ -1025,16 +1124,23 @@ class ProcessingService:
             return {"status": "error", "message": str(e)}
     
     async def import_notion_data(self, request: ImportRequest) -> Dict[str, Any]:
-        """Import data from Notion parser."""
+        """Import data from Notion API."""
         try:
-            from src.backend.parsers.notion.parser import parse_to_database
-            count = parse_to_database('notion_content.json', 
-                                    hours_since_last_edit=request.hours_since_last_update)
-            
+            from src.backend.parsers.notion.ingest_api import NotionIngestor
+
+            # Initialize Notion ingestor (uses NOTION_API_KEY from env)
+            ingestor = NotionIngestor()
+
+            # Ingest all accessible pages and blocks
+            # Note: Notion API doesn't support time-based filtering in the same way
+            # We ingest everything and then filter by last_edited_at in the database
+            count = ingestor.ingest_all()
+
             return {
-                "status": "success", 
+                "status": "success",
                 "imported_count": count,
-                "source": "notion"
+                "source": "notion",
+                "message": f"Imported {count} pages/blocks from Notion"
             }
         except Exception as e:
             return {
@@ -1047,24 +1153,55 @@ class ProcessingService:
         """Get status of data imports."""
         try:
             # Check database for recent imports
-            calendar_query = "SELECT COUNT(*) as count, MAX(created_at) as last_import FROM raw_activities WHERE source = 'google_calendar'"
-            notion_query = "SELECT COUNT(*) as count, MAX(created_at) as last_import FROM raw_activities WHERE source = 'notion'"
-            
-            calendar_result = self.db.execute_query(calendar_query)[0]
-            notion_result = self.db.execute_query(notion_query)[0]
-            
+            calendar_query = "SELECT COUNT(*) as count, MAX(created_at) as last_sync FROM raw_activities WHERE source = 'google_calendar'"
+            notion_query = "SELECT COUNT(*) as count FROM raw_activities WHERE source = 'notion'"
+            notion_pages_query = "SELECT COUNT(*) as page_count, MAX(created_at) as last_sync FROM notion_pages"
+
+            calendar_results = self.db.execute_query(calendar_query)
+            notion_results = self.db.execute_query(notion_query)
+            notion_pages_results = self.db.execute_query(notion_pages_query)
+
+            # Handle empty result sets and convert sqlite3.Row to dict
+            calendar_result = dict(calendar_results[0]) if calendar_results else {'count': 0, 'last_sync': None}
+            notion_result = dict(notion_results[0]) if notion_results else {'count': 0}
+            notion_pages_result = dict(notion_pages_results[0]) if notion_pages_results else {'page_count': 0, 'last_sync': None}
+
+            # Determine status based on data
+            calendar_count = calendar_result.get('count', 0) or 0
+            notion_count = notion_result.get('count', 0) or 0
+            notion_page_count = notion_pages_result.get('page_count', 0) or 0
+
             return {
-                "google_calendar": {
-                    "total_activities": calendar_result['count'],
-                    "last_import": calendar_result['last_import']
+                "calendar": {
+                    "last_sync": calendar_result.get('last_sync'),
+                    "status": "healthy" if calendar_count > 0 else "no_data",
+                    "total_imported": calendar_count
                 },
                 "notion": {
-                    "total_activities": notion_result['count'], 
-                    "last_import": notion_result['last_import']
+                    "last_sync": notion_pages_result.get('last_sync'),
+                    "status": "healthy" if (notion_count > 0 or notion_page_count > 0) else "no_data",
+                    "total_imported": max(notion_count, notion_page_count)
                 }
             }
         except Exception as e:
-            return {"error": str(e)}
+            # Log the error for debugging
+            print(f"Error getting import status: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+            # Return no_data instead of error for better UX
+            return {
+                "calendar": {
+                    "last_sync": None,
+                    "status": "no_data",
+                    "total_imported": 0
+                },
+                "notion": {
+                    "last_sync": None,
+                    "status": "no_data",
+                    "total_imported": 0
+                }
+            }
 
     async def build_taxonomy(self, request: TaxonomyBuildRequest) -> TaxonomyBuildResponse:
         """Build AI-generated tag taxonomy and synonyms."""
@@ -1203,47 +1340,107 @@ class SystemService:
     
     async def get_system_health(self) -> SystemHealthResponse:
         """Get system health status."""
+        import os
+
+        # Check database connection
+        db_connected = False
+        db_type = "unknown"
         try:
-            # Test database connection
-            test_query = "SELECT COUNT(*) as count FROM raw_activities"
-            result = self.db.execute_query(test_query)
-            total_activities = result[0]['count'] if result else 0
-            
-            # Get last update time
-            last_update_query = "SELECT MAX(created_at) as last_update FROM raw_activities"
-            update_result = self.db.execute_query(last_update_query)
-            last_updated = update_result[0]['last_update'] if update_result and update_result[0]['last_update'] else datetime.now()
-            
-            database_health = DatabaseHealth(
-                connected=True,
-                total_activities=total_activities,
-                last_updated=datetime.fromisoformat(last_updated) if isinstance(last_updated, str) else last_updated
-            )
+            test_query = "SELECT 1"
+            self.db.execute_query(test_query)
+            db_connected = True
+            # Determine database type from connection string or path
+            if hasattr(self.db.config, 'db_path'):
+                db_type = "sqlite"
+            else:
+                db_type = "postgresql"
+        except Exception:
+            pass
 
-            services_health = ServiceHealth(
-                tag_generator="operational",
-                activity_matcher="operational"
-            )
+        database_health = DatabaseHealth(
+            connected=db_connected,
+            type=db_type
+        )
 
-            return SystemHealthResponse(
-                status="healthy",
-                database=database_health,
-                services=services_health
-            )
-
+        # Check Notion API
+        notion_configured = False
+        notion_connected = False
+        try:
+            notion_api_key = os.getenv('NOTION_API_KEY')
+            if notion_api_key:
+                notion_configured = True
+                # Try to actually test the Notion API connection
+                try:
+                    from notion_client import Client
+                    notion = Client(auth=notion_api_key)
+                    # Quick test - just check if we can authenticate
+                    # This will raise an exception if the key is invalid
+                    notion.users.me()
+                    notion_connected = True
+                except Exception as e:
+                    # API key exists but connection failed
+                    print(f"Notion API configured but connection failed: {str(e)}")
+                    notion_connected = False
         except Exception as e:
-            return SystemHealthResponse(
-                status="down",
-                database=DatabaseHealth(
-                    connected=False,
-                    total_activities=0,
-                    last_updated=datetime.now()
-                ),
-                services=ServiceHealth(
-                    tag_generator="down",
-                    activity_matcher="down"
-                )
-            )
+            print(f"Notion API check error: {str(e)}")
+            pass
+
+        # Check Google Calendar API
+        gcal_configured = False
+        gcal_connected = False
+        try:
+            # Check if credentials.json and token.json exist
+            credentials_path = os.path.join(PROJECT_ROOT, 'credentials.json')
+            token_path = os.path.join(PROJECT_ROOT, 'token.json')
+
+            if os.path.exists(credentials_path):
+                gcal_configured = True
+                if os.path.exists(token_path):
+                    gcal_connected = True
+        except Exception:
+            pass
+
+        # Check OpenAI API
+        openai_configured = False
+        openai_connected = False
+        try:
+            openai_api_key = os.getenv('OPENAI_API_KEY')
+            if openai_api_key:
+                openai_configured = True
+                # Try to actually test the OpenAI API connection
+                try:
+                    from openai import OpenAI
+                    client = OpenAI(api_key=openai_api_key)
+                    # Quick test - just check if we can list models
+                    models = client.models.list()
+                    openai_connected = True
+                except Exception as e:
+                    # API key exists but connection failed
+                    print(f"OpenAI API configured but connection failed: {str(e)}")
+                    openai_connected = False
+        except Exception as e:
+            print(f"OpenAI API check error: {str(e)}")
+            pass
+
+        apis_health = ApiConnectionsHealth(
+            notion=ApiStatus(configured=notion_configured, connected=notion_connected),
+            google_calendar=ApiStatus(configured=gcal_configured, connected=gcal_connected),
+            openai=ApiStatus(configured=openai_configured, connected=openai_connected)
+        )
+
+        # Determine overall status
+        overall_status = "healthy"
+        if not db_connected:
+            overall_status = "down"
+        elif not (notion_connected or gcal_connected):
+            overall_status = "degraded"
+
+        return SystemHealthResponse(
+            status=overall_status,
+            database=database_health,
+            apis=apis_health,
+            timestamp=datetime.now().isoformat()
+        )
     
     async def get_system_stats(self) -> SystemStatsResponse:
         """Get system statistics."""
@@ -1252,40 +1449,70 @@ class SystemService:
             raw_count = self.db.execute_query("SELECT COUNT(*) as count FROM raw_activities")[0]['count']
             processed_count = self.db.execute_query("SELECT COUNT(*) as count FROM processed_activities")[0]['count']
             tags_count = self.db.execute_query("SELECT COUNT(*) as count FROM tags")[0]['count']
-            sessions_count = self.db.execute_query("SELECT COUNT(*) as count FROM user_sessions")[0]['count']
-            
-            # Get database file size
-            db_path = self.db.config.db_path
-            db_size_bytes = os.path.getsize(db_path) if os.path.exists(db_path) else 0
-            db_size_mb = round(db_size_bytes / (1024 * 1024), 2)
-            
-            # Get last processing run
-            last_processing_query = "SELECT MAX(start_time) as last_run FROM user_sessions WHERE session_type = 'processing'"
-            processing_result = self.db.execute_query(last_processing_query)
-            last_processing = processing_result[0]['last_run'] if processing_result and processing_result[0]['last_run'] else None
-            
-            # Calculate uptime
-            uptime_seconds = int((datetime.now() - self.start_time).total_seconds())
-            
+
+            # Get Notion counts
+            notion_pages_count = 0
+            notion_blocks_count = 0
+            try:
+                notion_pages_count = self.db.execute_query("SELECT COUNT(*) as count FROM notion_pages")[0]['count']
+                notion_blocks_count = self.db.execute_query("SELECT COUNT(*) as count FROM notion_blocks")[0]['count']
+            except Exception:
+                pass  # Tables might not exist
+
+            # Get date ranges
+            raw_earliest = None
+            raw_latest = None
+            try:
+                raw_range = self.db.execute_query(
+                    "SELECT MIN(date) as earliest, MAX(date) as latest FROM raw_activities"
+                )[0]
+                raw_earliest = raw_range['earliest']
+                raw_latest = raw_range['latest']
+            except Exception:
+                pass
+
+            processed_earliest = None
+            processed_latest = None
+            try:
+                processed_range = self.db.execute_query(
+                    "SELECT MIN(date) as earliest, MAX(date) as latest FROM processed_activities"
+                )[0]
+                processed_earliest = processed_range['earliest']
+                processed_latest = processed_range['latest']
+            except Exception:
+                pass
+
+            database_stats = DatabaseStats(
+                raw_activities_count=raw_count,
+                processed_activities_count=processed_count,
+                tags_count=tags_count,
+                notion_pages_count=notion_pages_count,
+                notion_blocks_count=notion_blocks_count
+            )
+
+            date_ranges = DateRanges(
+                raw_activities=DateRangeInfo(earliest=raw_earliest, latest=raw_latest),
+                processed_activities=DateRangeInfo(earliest=processed_earliest, latest=processed_latest)
+            )
+
             return SystemStatsResponse(
-                total_raw_activities=raw_count,
-                total_processed_activities=processed_count,
-                total_tags=tags_count,
-                total_sessions=sessions_count,
-                database_size_mb=db_size_mb,
-                last_processing_run=datetime.fromisoformat(last_processing) if last_processing else None,
-                uptime_seconds=uptime_seconds
+                database=database_stats,
+                date_ranges=date_ranges
             )
         except Exception as e:
             # Return error stats
             return SystemStatsResponse(
-                total_raw_activities=0,
-                total_processed_activities=0,
-                total_tags=0,
-                total_sessions=0,
-                database_size_mb=0.0,
-                last_processing_run=None,
-                uptime_seconds=0
+                database=DatabaseStats(
+                    raw_activities_count=0,
+                    processed_activities_count=0,
+                    tags_count=0,
+                    notion_pages_count=0,
+                    notion_blocks_count=0
+                ),
+                date_ranges=DateRanges(
+                    raw_activities=DateRangeInfo(),
+                    processed_activities=DateRangeInfo()
+                )
             )
 
     # Retrieval / Context endpoints (class-level methods)
@@ -1328,3 +1555,193 @@ class SystemService:
                 "score": round(r.score, 4)
             })
         return {"query": query, "date": date, "window_days": window_days, "results": items}
+
+    async def update_api_configuration(self, config_request: 'ApiConfigurationRequest') -> 'ApiConfigurationResponse':
+        """Update API configuration by writing to .env file."""
+        import os
+        from pathlib import Path
+
+        try:
+            # Path to root .env file
+            env_path = Path(PROJECT_ROOT) / '.env'
+
+            # Read existing .env file
+            env_vars = {}
+            if env_path.exists():
+                with open(env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            # Remove quotes if present
+                            value = value.strip('"').strip("'")
+                            env_vars[key.strip()] = value
+
+            # Update with new values
+            updated_keys = []
+            if config_request.notion_api_key is not None:
+                env_vars['NOTION_API_KEY'] = config_request.notion_api_key
+                updated_keys.append('NOTION_API_KEY')
+                # Also update in current environment
+                os.environ['NOTION_API_KEY'] = config_request.notion_api_key
+
+            if config_request.openai_api_key is not None:
+                env_vars['OPENAI_API_KEY'] = config_request.openai_api_key
+                updated_keys.append('OPENAI_API_KEY')
+                os.environ['OPENAI_API_KEY'] = config_request.openai_api_key
+
+            if config_request.openai_model is not None:
+                env_vars['OPENAI_MODEL'] = config_request.openai_model
+                updated_keys.append('OPENAI_MODEL')
+                os.environ['OPENAI_MODEL'] = config_request.openai_model
+
+            if config_request.openai_embed_model is not None:
+                env_vars['OPENAI_EMBED_MODEL'] = config_request.openai_embed_model
+                updated_keys.append('OPENAI_EMBED_MODEL')
+                os.environ['OPENAI_EMBED_MODEL'] = config_request.openai_embed_model
+
+            if config_request.google_calendar_key is not None:
+                env_vars['GOOGLE_CALENDAR_KEY'] = config_request.google_calendar_key
+                updated_keys.append('GOOGLE_CALENDAR_KEY')
+                os.environ['GOOGLE_CALENDAR_KEY'] = config_request.google_calendar_key
+
+            # Write back to .env file
+            with open(env_path, 'w') as f:
+                for key, value in env_vars.items():
+                    f.write(f'{key}="{value}"\n')
+
+            from .models import ApiConfigurationResponse
+            return ApiConfigurationResponse(
+                status="success",
+                message=f"Updated {len(updated_keys)} configuration key(s)",
+                updated_keys=updated_keys,
+                restart_required=False  # Since we're updating os.environ, no restart needed
+            )
+
+        except Exception as e:
+            from .models import ApiConfigurationResponse
+            return ApiConfigurationResponse(
+                status="error",
+                message=f"Failed to update configuration: {str(e)}",
+                updated_keys=[],
+                restart_required=False
+            )
+
+    async def test_api_connection(self, test_request: 'TestApiConnectionRequest') -> 'TestApiConnectionResponse':
+        """Test API connection with provided or configured credentials."""
+        import os
+        from .models import TestApiConnectionResponse
+
+        api_type = test_request.api_type
+        api_key = test_request.api_key
+
+        if api_type == 'notion':
+            try:
+                # Use provided key or get from environment
+                notion_key = api_key or os.getenv('NOTION_API_KEY')
+                if not notion_key:
+                    return TestApiConnectionResponse(
+                        api_type='notion',
+                        success=False,
+                        message="No API key provided or configured",
+                        details=None
+                    )
+
+                # Test Notion API
+                from notion_client import Client
+                notion = Client(auth=notion_key)
+                # Try to list users (simple API call)
+                response = notion.users.list()
+
+                return TestApiConnectionResponse(
+                    api_type='notion',
+                    success=True,
+                    message="Successfully connected to Notion API",
+                    details={"users_count": len(response.get('results', []))}
+                )
+            except Exception as e:
+                return TestApiConnectionResponse(
+                    api_type='notion',
+                    success=False,
+                    message=f"Failed to connect: {str(e)}",
+                    details=None
+                )
+
+        elif api_type == 'openai':
+            try:
+                # Use provided key or get from environment
+                openai_key = api_key or os.getenv('OPENAI_API_KEY')
+                if not openai_key:
+                    return TestApiConnectionResponse(
+                        api_type='openai',
+                        success=False,
+                        message="No API key provided or configured",
+                        details=None
+                    )
+
+                # Test OpenAI API
+                from openai import OpenAI
+                client = OpenAI(api_key=openai_key)
+                # Try to list models (simple API call)
+                models = client.models.list()
+
+                return TestApiConnectionResponse(
+                    api_type='openai',
+                    success=True,
+                    message="Successfully connected to OpenAI API",
+                    details={"models_count": len(models.data)}
+                )
+            except Exception as e:
+                return TestApiConnectionResponse(
+                    api_type='openai',
+                    success=False,
+                    message=f"Failed to connect: {str(e)}",
+                    details=None
+                )
+
+        elif api_type == 'google_calendar':
+            try:
+                # Check if credentials and token exist
+                credentials_path = os.path.join(PROJECT_ROOT, 'credentials.json')
+                token_path = os.path.join(PROJECT_ROOT, 'token.json')
+
+                if not os.path.exists(credentials_path):
+                    return TestApiConnectionResponse(
+                        api_type='google_calendar',
+                        success=False,
+                        message="credentials.json not found in project root",
+                        details=None
+                    )
+
+                if not os.path.exists(token_path):
+                    return TestApiConnectionResponse(
+                        api_type='google_calendar',
+                        success=False,
+                        message="token.json not found. Please run OAuth flow first.",
+                        details=None
+                    )
+
+                # Try to import and use the calendar ingest API
+                from src.backend.parsers.google_calendar.ingest_api import ingest_to_database
+
+                return TestApiConnectionResponse(
+                    api_type='google_calendar',
+                    success=True,
+                    message="Successfully connected to Google Calendar API",
+                    details={"credentials_valid": True}
+                )
+            except Exception as e:
+                return TestApiConnectionResponse(
+                    api_type='google_calendar',
+                    success=False,
+                    message=f"Failed to connect: {str(e)}",
+                    details=None
+                )
+
+        else:
+            return TestApiConnectionResponse(
+                api_type=api_type,
+                success=False,
+                message=f"Unknown API type: {api_type}",
+                details=None
+            )

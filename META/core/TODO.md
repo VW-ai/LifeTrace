@@ -1,11 +1,39 @@
 # Development2Development
-This TODO is Designed to be update everytime we finished our current development. 
+This TODO is Designed to be update everytime we finished our current development.
 This TODO serves as a guideline on what we should work on the next time we come back to this project's development.
 And every time we resume to development, we should read TODO first to know where to start
 We follow an append-only strategy in the writing of thie file.
 
 ---
-### Next Steps (as of 2025-09-26) - CURRENT PRIORITIES
+### Next Steps (as of 2025-10-06) - CURRENT PRIORITIES
+
+- [HIGH] **End-to-End Testing & Validation**
+  - Test complete Quick Start Wizard flow with real data (OpenAI, Calendar, Notion)
+  - Verify real-time tag generation progress displays correctly with actual activities
+  - Test error scenarios (API failures, timeouts, no data)
+  - Validate polling performance and memory usage during long processing jobs
+  - Test wizard flow on mobile/tablet responsive layouts
+
+- [MEDIUM] **Bug Fixes & Code Quality**
+  - Fix timeline.tsx TypeScript error: d3.timeFormat type mismatch in xAxis tickFormat
+  - Fix ESLint configuration warning: Invalid Options (useEslintrc, extensions removed)
+  - Address any remaining linting errors in codebase
+  - Add error boundary components for graceful failure handling
+
+- [MEDIUM] **Performance Optimizations**
+  - Optimize polling frequency based on dataset size (adaptive polling)
+  - Add cleanup for completed jobs in _job_progress dictionary (memory leak prevention)
+  - Consider moving job progress storage to database for persistence
+  - Add indexing for database queries if performance degrades with large datasets
+
+- [LOW] **Future Enhancements**
+  - Add WebSocket support for real-time updates (alternative to polling)
+  - Add pause/resume functionality for long-running processing jobs
+  - Add progress history view (past processing jobs with stats)
+  - Add export functionality for processing reports
+
+---
+### Next Steps (as of 2025-09-26) - ARCHIVE
 
 - [HIGH] **Backend Testing Infrastructure**
   - Fix pytest database concurrency issues causing disk I/O errors during test runs
@@ -341,7 +369,34 @@ We follow an append-only strategy in the writing of thie file.
 - **Functional Foundation:** Core logic (API integration, state management, routing) remains stable regardless of visual design choices.
 - **Migration Path:** Easy transition between design systems using existing component interfaces and props structure.
 
---- 
+---
+### Next Steps (as of 2025-10-05) - API KEY MANAGEMENT
+
+- [COMPLETED] ✅ **API Key Management Feature**
+  - ✅ Implemented user-friendly API configuration dialog for Notion, OpenAI, and Google Calendar
+  - ✅ Added test connection functionality to validate API keys before saving
+  - ✅ Created backend endpoints: POST /api/v1/config/api and POST /api/v1/config/test
+  - ✅ Implemented automatic .env file updates with runtime environment synchronization (no restart needed)
+  - ✅ Added API key masking (password field) with show/hide toggle for security
+  - ✅ Built comprehensive error handling and user feedback with toast notifications
+  - ✅ Created detailed feature documentation in META/features/API-KEY-MANAGEMENT.md
+
+- [HIGH] **Settings Page - Complete Implementation**
+  - ✅ API Configuration section with real-time health monitoring
+  - ✅ Data Ingestion enhancements (backfill calendar, index Notion blocks)
+  - ✅ Tag Generation improvements (reprocess date ranges)
+  - ✅ Tag Cleanup with AI-powered analysis
+  - ✅ Processing Logs with filtering and search
+  - ✅ Comprehensive UPDATE-SETTING.md documentation with quick start guide
+
+- [MEDIUM] **Future API Management Enhancements**
+  - Add ability to edit/update existing API keys (currently can only configure new ones)
+  - Implement key format validation before test connection
+  - Add "Copy to Clipboard" for API keys with security confirmation
+  - Show API usage statistics and rate limits
+  - Implement automated key health monitoring and expiry warnings
+
+---
 ### Next Steps (as of 2025-08-30)
 The following are manually written, You should reorgniaze it for formatting.
 1. API is not correctly retrieving database from our database
