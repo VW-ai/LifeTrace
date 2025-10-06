@@ -396,6 +396,20 @@ export class ApiClient {
     }>>(`/api/v1/process/history?limit=${limit}`)
   }
 
+  async getProcessingProgress(jobId: string) {
+    return this.request<{
+      job_id: string
+      status: string
+      activity_index: number
+      total_activities: number
+      current_activity: string
+      current_tags: string[]
+      progress: number
+      error?: string
+      report?: any
+    }>(`/api/v1/process/progress/${jobId}`)
+  }
+
   async buildTaxonomy(params: {
     date_start?: string
     date_end?: string
@@ -552,6 +566,10 @@ export class ApiClient {
           configured: boolean
           connected: boolean
         }
+        openai: {
+          configured: boolean
+          connected: boolean
+        }
       }
       timestamp: string
     }>('/api/v1/system/health')
@@ -577,6 +595,40 @@ export class ApiClient {
         }
       }
     }>('/api/v1/system/stats')
+  }
+
+  // Configuration endpoints
+  async updateApiConfiguration(config: {
+    notion_api_key?: string
+    openai_api_key?: string
+    openai_model?: string
+    openai_embed_model?: string
+    google_calendar_key?: string
+  }) {
+    return this.request<{
+      status: string
+      message: string
+      updated_keys: string[]
+      restart_required: boolean
+    }>('/api/v1/config/api', {
+      method: 'POST',
+      body: JSON.stringify(config)
+    })
+  }
+
+  async testApiConnection(params: {
+    api_type: 'notion' | 'openai' | 'google_calendar'
+    api_key?: string
+  }) {
+    return this.request<{
+      api_type: string
+      success: boolean
+      message: string
+      details?: Record<string, any>
+    }>('/api/v1/config/test', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    })
   }
 }
 

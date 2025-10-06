@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, ArrowDown } from "lucide-react"
+import { ArrowLeft, ArrowDown, Zap } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { DataIngestionSettings } from "../../components/settings/data-ingestion-settings"
@@ -9,11 +9,13 @@ import { TagGenerationSettings } from "../../components/settings/tag-generation-
 import { TagCleanupSettings } from "../../components/settings/tag-cleanup-settings"
 import { ProcessingLogs } from "../../components/settings/processing-logs"
 import { ApiConfigurationSettings } from "../../components/settings/api-configuration-settings"
+import { QuickStartWizard } from "../../components/settings/quick-start-wizard"
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<string>("ingestion")
+  const [activeSection, setActiveSection] = useState<string>("quickstart")
 
   const sections = [
+    { id: "quickstart", label: "Quick Start", description: "Get started in 5 minutes", icon: Zap, highlight: true },
     { id: "config", label: "API Configuration", description: "Configure connections" },
     { id: "ingestion", label: "Data Ingestion", description: "Import Data" },
     { id: "generation", label: "Tag Generation", description: "Process activities and generate tags" },
@@ -23,6 +25,8 @@ export default function SettingsPage() {
 
   const renderActiveSection = () => {
     switch (activeSection) {
+      case "quickstart":
+        return <QuickStartWizard />
       case "config":
         return <ApiConfigurationSettings />
       case "ingestion":
@@ -34,7 +38,7 @@ export default function SettingsPage() {
       case "logs":
         return <ProcessingLogs />
       default:
-        return <ApiConfigurationSettings />
+        return <QuickStartWizard />
     }
   }
 
@@ -70,21 +74,27 @@ export default function SettingsPage() {
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
             <div className="space-y-2">
-              {sections.map((section) => (
-                <Button
-                  key={section.id}
-                  variant={activeSection === section.id ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveSection(section.id)}
-                >
-                  <div className="text-left">
-                    <div className="font-medium">{section.label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {section.description}
+              {sections.map((section) => {
+                const Icon = section.icon
+                return (
+                  <Button
+                    key={section.id}
+                    variant={activeSection === section.id ? "default" : "ghost"}
+                    className={`w-full justify-start ${section.highlight && activeSection !== section.id ? 'border-2 border-primary/50 hover:bg-primary/10' : ''}`}
+                    onClick={() => setActiveSection(section.id)}
+                  >
+                    <div className="flex items-center gap-2 text-left w-full">
+                      {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                      <div className="flex-1">
+                        <div className="font-medium">{section.label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {section.description}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Button>
-              ))}
+                  </Button>
+                )
+              })}
             </div>
 
             {/* Workflow Overview */}

@@ -1,29 +1,78 @@
 {
-  "work": [
-    "meetings",
-    "coding",
-    "debugging",
-    "application",
-    "project_management",
-    "interviews",
-    "planning"
-  ],
-  "health": [
-    "exercise",
-    "meals",
-    "acupuncture",
-    "rest"
-  ],
-  "personal": [
-    "family_time",
-    "socializing",
-    "errands",
-    "journaling",
-    "travel_planning"
-  ],
-  "school": [
-    "course_selection",
-    "assignments",
-    "study_sessions"
-  ]
+  "Health & Wellness": {
+    "Physical Activities": [
+      "Running",
+      "Yoga",
+      "Weightlifting",
+      "Cycling"
+    ],
+    "Mental Wellness": [
+      "Meditation",
+      "Journaling",
+      "Therapy",
+      "Mindfulness"
+    ],
+    "Nutrition": [
+      "Meal Prep",
+      "Healthy Eating",
+      "Calorie Tracking",
+      "Vegan Cooking"
+    ]
+  },
+  "Social Engagement": {
+    "In-Person Gatherings": [
+      "Parties",
+      "Meetups",
+      "Family Reunions",
+      "Networking Events"
+    ],
+    "Virtual Interactions": [
+      "Video Calls",
+      "Online Gaming",
+      "Social Media Engagement",
+      "Webinars"
+    ]
+  },
+  "Learning & Development": {
+    "Formal Education": [
+      "University Courses",
+      "Online Classes",
+      "Workshops",
+      "Certification Programs"
+    ],
+    "Self-Directed Learning": [
+      "Reading",
+      "Podcasts",
+      "Skill Development",
+      "Hobbies"
+    ]
+  },
+  "Creative Expression": {
+    "Artistic Activities": [
+      "Painting",
+      "Writing",
+      "Photography",
+      "Crafting"
+    ],
+    "Performing Arts": [
+      "Dancing",
+      "Acting",
+      "Music Performance",
+      "Public Speaking"
+    ]
+  },
+  "Travel & Exploration": {
+    "Domestic Travel": [
+      "Road Trips",
+      "Camping",
+      "City Tours",
+      "Staycations"
+    ],
+    "International Travel": [
+      "Backpacking",
+      "Cultural Tours",
+      "Beach Vacations",
+      "Adventure Travel"
+    ]
+  }
 }

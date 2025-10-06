@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Key, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw, Settings } from "lucide-react"
+import { Key, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw, Settings as SettingsIcon } from "lucide-react"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Badge } from "../ui/badge"
 import { Separator } from "../ui/separator"
 import { apiClient } from "../../lib/api-client"
 import { toast } from "sonner"
+import { ApiConfigDialog } from "./api-config-dialog"
 
 interface SystemHealth {
   status: string
@@ -21,6 +22,10 @@ interface SystemHealth {
       connected: boolean
     }
     google_calendar: {
+      configured: boolean
+      connected: boolean
+    }
+    openai: {
       configured: boolean
       connected: boolean
     }
@@ -94,7 +99,7 @@ export function ApiConfigurationSettings() {
     return <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" /> Error</Badge>
   }
 
-  const formatDate = (date: string | null) => {
+  const formatDate = (date: string | null | undefined) => {
     if (!date) return "N/A"
     return new Date(date).toLocaleDateString()
   }
@@ -149,7 +154,7 @@ export function ApiConfigurationSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <SettingsIcon className="h-5 w-5" />
               System Health
             </CardTitle>
             <Button variant="outline" size="sm" onClick={loadSystemInfo}>
@@ -191,16 +196,30 @@ export function ApiConfigurationSettings() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium">Notion API</span>
-                {health?.apis?.notion ? getConnectionBadge(
-                  health.apis.notion.configured,
-                  health.apis.notion.connected
-                ) : (
-                  <Badge variant="outline">Loading...</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {health?.apis?.notion ? getConnectionBadge(
+                    health.apis.notion.configured,
+                    health.apis.notion.connected
+                  ) : (
+                    <Badge variant="outline">Loading...</Badge>
+                  )}
+                  {health?.apis?.notion && !health.apis.notion.configured && (
+                    <ApiConfigDialog
+                      apiType="notion"
+                      apiName="Notion"
+                      onConfigured={loadSystemInfo}
+                    >
+                      <Button size="sm" variant="default">
+                        <SettingsIcon className="h-4 w-4 mr-1" />
+                        Configure
+                      </Button>
+                    </ApiConfigDialog>
+                  )}
+                </div>
               </div>
               {health?.apis?.notion && !health.apis.notion.configured && (
                 <p className="text-sm text-muted-foreground">
-                  Configure NOTION_API_KEY in your environment variables
+                  Click Configure to add your Notion API key
                 </p>
               )}
             </div>
@@ -209,16 +228,62 @@ export function ApiConfigurationSettings() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium">Google Calendar</span>
-                {health?.apis?.google_calendar ? getConnectionBadge(
-                  health.apis.google_calendar.configured,
-                  health.apis.google_calendar.connected
-                ) : (
-                  <Badge variant="outline">Loading...</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {health?.apis?.google_calendar ? getConnectionBadge(
+                    health.apis.google_calendar.configured,
+                    health.apis.google_calendar.connected
+                  ) : (
+                    <Badge variant="outline">Loading...</Badge>
+                  )}
+                  {health?.apis?.google_calendar && !health.apis.google_calendar.configured && (
+                    <ApiConfigDialog
+                      apiType="google_calendar"
+                      apiName="Google Calendar"
+                      onConfigured={loadSystemInfo}
+                    >
+                      <Button size="sm" variant="default">
+                        <SettingsIcon className="h-4 w-4 mr-1" />
+                        Configure
+                      </Button>
+                    </ApiConfigDialog>
+                  )}
+                </div>
               </div>
               {health?.apis?.google_calendar && !health.apis.google_calendar.configured && (
                 <p className="text-sm text-muted-foreground">
-                  Configure credentials.json and token.json in project root
+                  Click Configure for setup instructions
+                </p>
+              )}
+            </div>
+
+            {/* OpenAI */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">OpenAI</span>
+                <div className="flex items-center gap-2">
+                  {health?.apis?.openai ? getConnectionBadge(
+                    health.apis.openai.configured,
+                    health.apis.openai.connected
+                  ) : (
+                    <Badge variant="outline">Loading...</Badge>
+                  )}
+                  {health?.apis?.openai && !health.apis.openai.configured && (
+                    <ApiConfigDialog
+                      apiType="openai"
+                      apiName="OpenAI"
+                      onConfigured={loadSystemInfo}
+                    >
+                      <Button size="sm" variant="default">
+                        <SettingsIcon className="h-4 w-4 mr-1" />
+                        Configure
+                      </Button>
+                    </ApiConfigDialog>
+                  )}
+                </div>
+              </div>
+              {health?.apis?.openai && !health.apis.openai.configured && (
+                <p className="text-sm text-muted-foreground">
+                  Click Configure to add your OpenAI API key
                 </p>
               )}
             </div>
@@ -240,23 +305,23 @@ export function ApiConfigurationSettings() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="text-center p-3 border rounded-lg">
-              <div className="text-2xl font-bold">{stats?.database.raw_activities_count || 0}</div>
+              <div className="text-2xl font-bold">{stats?.database?.raw_activities_count || 0}</div>
               <div className="text-xs text-muted-foreground">Raw Activities</div>
             </div>
             <div className="text-center p-3 border rounded-lg">
-              <div className="text-2xl font-bold">{stats?.database.processed_activities_count || 0}</div>
+              <div className="text-2xl font-bold">{stats?.database?.processed_activities_count || 0}</div>
               <div className="text-xs text-muted-foreground">Processed Activities</div>
             </div>
             <div className="text-center p-3 border rounded-lg">
-              <div className="text-2xl font-bold">{stats?.database.tags_count || 0}</div>
+              <div className="text-2xl font-bold">{stats?.database?.tags_count || 0}</div>
               <div className="text-xs text-muted-foreground">Tags</div>
             </div>
             <div className="text-center p-3 border rounded-lg">
-              <div className="text-2xl font-bold">{stats?.database.notion_pages_count || 0}</div>
+              <div className="text-2xl font-bold">{stats?.database?.notion_pages_count || 0}</div>
               <div className="text-xs text-muted-foreground">Notion Pages</div>
             </div>
             <div className="text-center p-3 border rounded-lg">
-              <div className="text-2xl font-bold">{stats?.database.notion_blocks_count || 0}</div>
+              <div className="text-2xl font-bold">{stats?.database?.notion_blocks_count || 0}</div>
               <div className="text-xs text-muted-foreground">Notion Blocks</div>
             </div>
           </div>
@@ -270,13 +335,13 @@ export function ApiConfigurationSettings() {
               <div className="p-2 bg-muted rounded">
                 <div className="font-medium mb-1">Raw Activities</div>
                 <div className="text-xs text-muted-foreground">
-                  {formatDate(stats?.date_ranges.raw_activities.earliest)} → {formatDate(stats?.date_ranges.raw_activities.latest)}
+                  {formatDate(stats?.date_ranges?.raw_activities?.earliest)} → {formatDate(stats?.date_ranges?.raw_activities?.latest)}
                 </div>
               </div>
               <div className="p-2 bg-muted rounded">
                 <div className="font-medium mb-1">Processed Activities</div>
                 <div className="text-xs text-muted-foreground">
-                  {formatDate(stats?.date_ranges.processed_activities.earliest)} → {formatDate(stats?.date_ranges.processed_activities.latest)}
+                  {formatDate(stats?.date_ranges?.processed_activities?.earliest)} → {formatDate(stats?.date_ranges?.processed_activities?.latest)}
                 </div>
               </div>
             </div>

@@ -20,12 +20,19 @@ if __name__ == "__main__":
     
     env = os.getenv("ENVIRONMENT", "development")
     print(f"🚀 Starting SmartHistory API in {env.upper()} mode...")
-    
-    # Load environment-specific .env file if it exists
+
+    from dotenv import load_dotenv
+
+    # Load root .env file first (for API keys)
+    root_env_file = Path(__file__).parent.parent.parent / ".env"
+    if root_env_file.exists():
+        print(f"📁 Loading API keys from {root_env_file}")
+        load_dotenv(root_env_file)
+
+    # Load environment-specific .env file if it exists (can override root .env)
     env_file = Path(f".env.{env}")
     if env_file.exists():
         print(f"📁 Loading configuration from {env_file}")
-        from dotenv import load_dotenv
-        load_dotenv(env_file)
-    
+        load_dotenv(env_file, override=True)
+
     run_server()

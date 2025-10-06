@@ -9,7 +9,9 @@
       "Bash(mkdir:*)",
       "Bash(sqlite3:*)",
       "Bash(tree:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
